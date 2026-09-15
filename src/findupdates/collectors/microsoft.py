@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import time
+import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -14,7 +15,6 @@ from typing import Any, Protocol, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
-import xml.etree.ElementTree as ET
 
 from findupdates.normalization import AffectedProduct, UpdateAdvisory
 
@@ -379,7 +379,9 @@ def _normalize_xml(
         raise MsrcParseError(f"invalid CVRF XML: {exc}") from exc
 
     products = _xml_product_map(root)
-    vulnerabilities = [element for element in root.iter() if _local_name(element.tag) == "Vulnerability"]
+    vulnerabilities = [
+        element for element in root.iter() if _local_name(element.tag) == "Vulnerability"
+    ]
     advisories: list[UpdateAdvisory] = []
     for index, vulnerability in enumerate(vulnerabilities, start=1):
         cve = _xml_direct_text(vulnerability, "CVE")
