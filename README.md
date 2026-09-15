@@ -10,7 +10,7 @@ The target pipeline discovers Microsoft and Intel advisories, determines whether
 - Deterministic policy gates are the source of truth for machine-enforceable decisions.
 - Unknown or stale applicability data fails safe and must not be interpreted as `not_affected`.
 - GitHub is the control plane for code, change records, approvals and evidence; device updates are executed only through approved deployment adapters.
-- Production rollout remains gated by validation, approval, monitoring and an append-only audit package; this repository is not approved for production deployment.
+- Production rollout remains gated by a deployment kill switch, least-privilege workflows, freshness alerts and crash recovery that does not reinstall. This repository is not approved for production deployment.
 - Patient identifiers and PHI must never enter repository fixtures, logs, model prompts or audit artifacts.
 
 ## Repository layout
@@ -30,6 +30,7 @@ src/findupdates/          Application packages
   rollout/                Staged canary/ring promotion
   monitoring/             Post-deploy health, pause and gated rollback
   audit/                  Evidence and audit trail
+  ops/                    Kill switch, metrics, freshness alerts, recovery
 configs/                  Version-controlled non-secret configuration
 schemas/                  Versioned JSON Schemas
 tests/                    Unit, integration and fixtures
@@ -57,7 +58,7 @@ Runtime configuration is supplied through environment variables. Copy `.env.exam
 
 ## Current roadmap
 
-The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Intel CSAF ingestion is [Issue #13](https://github.com/defrances/FindUpdates/issues/13). NVD and CISA KEV enrichment is [Issue #15](https://github.com/defrances/FindUpdates/issues/15). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9). Applicability matching is [Issue #17](https://github.com/defrances/FindUpdates/issues/17). Deterministic risk and policy evaluation is [Issue #19](https://github.com/defrances/FindUpdates/issues/19). Bounded AI analysis is [Issue #21](https://github.com/defrances/FindUpdates/issues/21). GitHub change records and approval gates are [Issue #23](https://github.com/defrances/FindUpdates/issues/23). Severity-aware notifications are [Issue #25](https://github.com/defrances/FindUpdates/issues/25). Lab validation is [Issue #27](https://github.com/defrances/FindUpdates/issues/27). The deployment adapter boundary is [Issue #29](https://github.com/defrances/FindUpdates/issues/29). Staged canary/ring rollout is [Issue #30](https://github.com/defrances/FindUpdates/issues/30). Post-deployment monitoring is [Issue #31](https://github.com/defrances/FindUpdates/issues/31). The immutable audit trail and evidence package is [Issue #32](https://github.com/defrances/FindUpdates/issues/32).
+The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Intel CSAF ingestion is [Issue #13](https://github.com/defrances/FindUpdates/issues/13). NVD and CISA KEV enrichment is [Issue #15](https://github.com/defrances/FindUpdates/issues/15). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9). Applicability matching is [Issue #17](https://github.com/defrances/FindUpdates/issues/17). Deterministic risk and policy evaluation is [Issue #19](https://github.com/defrances/FindUpdates/issues/19). Bounded AI analysis is [Issue #21](https://github.com/defrances/FindUpdates/issues/21). GitHub change records and approval gates are [Issue #23](https://github.com/defrances/FindUpdates/issues/23). Severity-aware notifications are [Issue #25](https://github.com/defrances/FindUpdates/issues/25). Lab validation is [Issue #27](https://github.com/defrances/FindUpdates/issues/27). The deployment adapter boundary is [Issue #29](https://github.com/defrances/FindUpdates/issues/29). Staged canary/ring rollout is [Issue #30](https://github.com/defrances/FindUpdates/issues/30). Post-deployment monitoring is [Issue #31](https://github.com/defrances/FindUpdates/issues/31). The immutable audit trail and evidence package is [Issue #32](https://github.com/defrances/FindUpdates/issues/32). Pipeline security, observability and operational failure handling is [Issue #33](https://github.com/defrances/FindUpdates/issues/33).
 
 ## Status
 

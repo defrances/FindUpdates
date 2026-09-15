@@ -1,7 +1,11 @@
 # Initial ownership; refine by domain as the team grows.
 * @defrances
 
+/configs/ @defrances
 /configs/policies/ @defrances
+/configs/operations/ @defrances
 /schemas/ @defrances
 /src/findupdates/deployment/ @defrances
+/src/findupdates/ops/ @defrances
+/.github/ @defrances
 /.github/workflows/ @defrances

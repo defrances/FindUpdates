@@ -26,10 +26,10 @@ on:
         default: ""
 
 # No pull_request trigger: untrusted PR code must not see production environment secrets.
+# OIDC is requested only on canary/production jobs, not on the policy gate.
 permissions:
   contents: read
   issues: read
-  id-token: write
 
 concurrency:
   group: findupdates-change-${{ inputs.idempotency_key }}
@@ -39,13 +39,17 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     outputs:
       target: ${{ inputs.target_environment }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Enforce stored policy
@@ -73,6 +77,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: lab
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Simulated lab handoff
         run: echo "Lab environment reached after policy gate. No production credentials are loaded."
@@ -83,6 +89,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: canary
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Simulated canary handoff
         run: echo "Canary environment requires GitHub Environment reviewers. Adapter is simulated."
@@ -93,6 +102,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Simulated production handoff
         run: echo "Production job cannot start until Environment approval. OIDC is requested; no long-lived deploy secrets are in this workflow."

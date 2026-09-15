@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "status": "draft",
+  "deployments_enabled": true,
+  "disabled_reason": null,
+  "scanner_block_severity": ["critical", "high"],
+  "dead_letter_max_attempts": 3,
+  "freshness_hours": {
+    "msrc": 48,
+    "intel": 168,
+    "kev": 24,
+    "nvd": 24,
+    "inventory": 72
+  },
+  "missing_observability_is_healthy": false
+}
