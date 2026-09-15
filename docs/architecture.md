@@ -6,7 +6,7 @@
 Vendor/intelligence sources
         |
         v
-    collectors
+    collectors (MSRC CVRF, Intel CSAF)
         |
         v
    normalization

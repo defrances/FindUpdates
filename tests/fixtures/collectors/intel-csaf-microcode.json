@@ -1,0 +1,60 @@
+{
+  "document": {
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "title": "Intel Processor Microcode Update Advisory",
+    "tracking": {
+      "id": "INTEL-SA-01234",
+      "initial_release_date": "2026-08-12T00:00:00Z",
+      "current_release_date": "2026-08-19T00:00:00Z",
+      "version": "1.0.0"
+    },
+    "references": [
+      {
+        "url": "https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-01234.html",
+        "category": "self"
+      }
+    ],
+    "notes": [
+      {
+        "category": "general",
+        "text": "Synthetic Intel CSAF fixture. Vulnerability intelligence only."
+      }
+    ]
+  },
+  "product_tree": {
+    "full_product_names": [
+      {
+        "name": "Intel Core i7-1185G7",
+        "product_id": "CSAFPID-0001",
+        "product_identification_helper": {
+          "cpe": "cpe:2.3:h:intel:core_i7-1185g7:-:*:*:*:*:*:*:*"
+        }
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2026-22222",
+      "product_status": {
+        "known_affected": ["CSAFPID-0001"]
+      },
+      "scores": [
+        {
+          "cvss_v3": {
+            "version": "3.1",
+            "vectorString": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:C/C:H/I:N/A:N",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM"
+          }
+        }
+      ],
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "Apply an OEM-qualified BIOS/microcode that includes Intel MCU 0x00000012."
+        }
+      ]
+    }
+  ]
+}

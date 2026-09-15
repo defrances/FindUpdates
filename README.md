@@ -53,7 +53,7 @@ Runtime configuration is supplied through environment variables. Copy `.env.exam
 
 ## Current roadmap
 
-The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9).
+The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Intel CSAF ingestion is [Issue #13](https://github.com/defrances/FindUpdates/issues/13). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9).
 
 ## Status
 

@@ -1,0 +1,9 @@
+{
+  "advisories": [
+    {
+      "id": "INTEL-SA-01234",
+      "url": "https://example.invalid/csaf/intel-sa-01234.json",
+      "updated": "2026-08-19T00:00:00Z"
+    }
+  ]
+}

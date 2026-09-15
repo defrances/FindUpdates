@@ -21,6 +21,8 @@ class Settings:
     http_min_interval_seconds: float = 0.25
     msrc_base_url: str = "https://api.msrc.microsoft.com/cvrf/v3.0"
     msrc_lookback_days: int = 45
+    intel_csaf_index_url: str | None = None
+    intel_lookback_days: int = 120
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -37,4 +39,6 @@ class Settings:
                 "FINDUPDATES_MSRC_BASE_URL", "https://api.msrc.microsoft.com/cvrf/v3.0"
             ),
             msrc_lookback_days=int(os.getenv("FINDUPDATES_MSRC_LOOKBACK_DAYS", "45")),
+            intel_csaf_index_url=os.getenv("FINDUPDATES_INTEL_CSAF_INDEX_URL") or None,
+            intel_lookback_days=int(os.getenv("FINDUPDATES_INTEL_LOOKBACK_DAYS", "120")),
         )
