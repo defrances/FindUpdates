@@ -6,6 +6,7 @@ This module does not deploy updates and does not call Intune or OEM backends.
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from findupdates.applicability import evaluate
+from findupdates.applicability.models import ApplicabilityResult
 from findupdates.changerecords import (
     ChangeStoreError,
     MemoryChangeStore,
@@ -36,8 +38,18 @@ from findupdates.inventory import DeviceInventory, load_inventory, refresh_for_a
 from findupdates.logging import set_correlation_id, set_log_context
 from findupdates.normalization.models import UpdateAdvisory
 from findupdates.normalization.serialize import dict_to_advisory
+from findupdates.notifications.channels import (
+    ChannelAdapter,
+    GitHubCommentChannel,
+    WebhookChannel,
+    WebhookTransport,
+)
+from findupdates.notifications.models import DeliveryStatus, NotifyResult
+from findupdates.notifications.serialize import event_to_dict
+from findupdates.notifications.service import NotificationService
 from findupdates.pipeline.errors import AssessError
 from findupdates.risk import assess as assess_risk
+from findupdates.risk.models import RiskAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +68,9 @@ class AssessOptions:
     nvd_transport: ByteTransport | None = None
     kev_transport: ByteTransport | None = None
     settings: Settings | None = None
+    skip_notify: bool = False
+    notifications: NotificationService | None = None
+    webhook_transport: WebhookTransport | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +85,8 @@ class AssessedChange:
     idempotency_key: str
     created: bool | None
     issue_number: int | None
+    notified: bool | None
+    notification_suppressed: bool | None
 
 
 @dataclass
@@ -92,8 +109,15 @@ def assess_collected(options: AssessOptions, *, now: datetime) -> AssessRun:
         )
         store = options.store if options.dry_run else _resolve_store(options)
         enrichment = _enrichment_service(options, now)
+        notifications = _notification_service(options)
         changes, notes = _assess_all(
-            advisories, devices, store, options, now, enrichment=enrichment
+            advisories,
+            devices,
+            store,
+            options,
+            now,
+            enrichment=enrichment,
+            notifications=notifications,
         )
     except (AssessError, ChangeStoreError, OSError, ValueError, KeyError, TypeError) as exc:
         set_log_context(stage="none")
@@ -142,6 +166,8 @@ def write_summary(run: AssessRun, output_dir: Path) -> Path:
                 "idempotency_key": item.idempotency_key,
                 "created": item.created,
                 "issue_number": item.issue_number,
+                "notified": item.notified,
+                "notification_suppressed": item.notification_suppressed,
             }
             for item in run.changes
         ],
@@ -182,6 +208,22 @@ def write_enrichment(output_dir: Path, records: tuple[CveEnrichment, ...]) -> No
         )
 
 
+def write_notification(output_dir: Path, result: NotifyResult) -> None:
+    """Write notification artifacts. Token fields are refused."""
+    if result.event is None:
+        return
+    payload = event_to_dict(result.event)
+    if "token" in payload:
+        raise AssessError("refusing to write notification JSON that contains a token field")
+    folder = output_dir / "notifications"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{result.event.event_id}.json"
+    path.write_text(
+        json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _assess_all(
     advisories: tuple[UpdateAdvisory, ...],
     devices: tuple[DeviceInventory, ...],
@@ -190,6 +232,7 @@ def _assess_all(
     now: datetime,
     *,
     enrichment: EnrichmentService | None,
+    notifications: NotificationService | None,
 ) -> tuple[tuple[AssessedChange, ...], list[str]]:
     grouped: dict[str, list[DeviceInventory]] = defaultdict(list)
     for device in devices:
@@ -225,10 +268,23 @@ def _assess_all(
                 record = upsert.record
             if options.output_dir is not None:
                 write_record(options.output_dir, record)
+            notice = _notify(
+                notifications,
+                advisory,
+                tuple(members),
+                apps,
+                risks,
+                record,
+                options,
+                now,
+            )
+            if options.output_dir is not None and notice is not None and not notice.suppressed:
+                write_notification(options.output_dir, notice)
             notes.append(
                 f"{advisory.advisory_id} group={group} "
                 f"policy={record.policy_result} key={record.idempotency_key} "
                 f"known_exploited={advisory.known_exploited.value}"
+                f"{_notify_note(notice)}"
             )
             rows.append(
                 AssessedChange(
@@ -242,6 +298,8 @@ def _assess_all(
                     idempotency_key=record.idempotency_key,
                     created=None if upsert is None else upsert.created,
                     issue_number=None if upsert is None else upsert.issue_number,
+                    notified=None if notice is None else not notice.suppressed,
+                    notification_suppressed=None if notice is None else notice.suppressed,
                 )
             )
     return tuple(rows), notes
@@ -259,6 +317,77 @@ def _enrichment_service(options: AssessOptions, now: datetime) -> EnrichmentServ
         kev_transport=options.kev_transport,
         now=now,
     )
+
+
+def _notification_service(options: AssessOptions) -> NotificationService | None:
+    if options.skip_notify:
+        return None
+    if options.notifications is not None:
+        return options.notifications
+    github = GitHubCommentChannel()
+    channels: dict[str, ChannelAdapter] = {"github": github}
+    if options.dry_run:
+        channels["webhook"] = github
+    else:
+        url = _webhook_url(options.environ)
+        if url is not None:
+            settings = options.settings or Settings.from_env()
+            channels["webhook"] = WebhookChannel(
+                url,
+                timeout_seconds=settings.http_timeout_seconds,
+                transport=options.webhook_transport,
+            )
+    return NotificationService(channels)
+
+
+def _notify(
+    notifications: NotificationService | None,
+    advisory: UpdateAdvisory,
+    devices: tuple[DeviceInventory, ...],
+    apps: tuple[ApplicabilityResult, ...],
+    risks: tuple[RiskAssessment, ...],
+    record: ChangeRecord,
+    options: AssessOptions,
+    now: datetime,
+) -> NotifyResult | None:
+    if notifications is None:
+        return None
+    return notifications.notify_advisory(
+        advisory,
+        devices,
+        apps,
+        risks,
+        record,
+        now=now,
+        change_record_url=_change_record_url(options, record),
+    )
+
+
+def _change_record_url(options: AssessOptions, record: ChangeRecord) -> str:
+    repo = (options.repository or "").strip()
+    number = record.github_issue_number
+    if repo and number:
+        return f"https://github.com/{repo}/issues/{number}"
+    return f"https://example.invalid/findupdates/changes/{record.idempotency_key}"
+
+
+def _webhook_url(environ: Mapping[str, str] | None) -> str | None:
+    env = os.environ if environ is None else environ
+    raw = env.get("FINDUPDATES_NOTIFICATION_WEBHOOK_URL")
+    if raw is None or not raw.strip():
+        return None
+    return raw.strip()
+
+
+def _notify_note(result: NotifyResult | None) -> str:
+    if result is None:
+        return ""
+    if result.suppressed:
+        return " notify=suppressed"
+    failed = [item.channel for item in result.deliveries if item.status is DeliveryStatus.FAILED]
+    if failed:
+        return f" notify=failed:{','.join(failed)}"
+    return " notify=emitted"
 
 
 def _resolve_store(options: AssessOptions) -> ChangeRecordStore:

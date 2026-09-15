@@ -74,6 +74,11 @@ def main(
         action="store_true",
         help="Skip NVD/CISA KEV lookups. Use for air-gapped or fixture-only runs.",
     )
+    assess.add_argument(
+        "--skip-notify",
+        action="store_true",
+        help="Skip severity-aware notifications after each change-record upsert.",
+    )
     args = parser.parse_args(argv)
     settings = Settings.from_env()
     configure_logging(settings.log_level)
@@ -90,6 +95,7 @@ def main(
             transport=transport,
             repository=args.repository or settings.github_repository,
             skip_enrichment=args.skip_enrichment,
+            skip_notify=args.skip_notify,
             settings=settings,
         ),
         now=datetime.now(UTC),

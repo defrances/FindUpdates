@@ -18,6 +18,12 @@ from findupdates.inventory import device_to_dict, dict_to_device
 from findupdates.mvp.fixtures import NOW, imaging_workstation, intel_advisory, microsoft_advisory
 from findupdates.normalization.models import TriState
 from findupdates.normalization.serialize import advisory_to_dict
+from findupdates.notifications import (
+    GitHubCommentChannel,
+    MappingWebhookTransport,
+    MemoryNotificationLog,
+    NotificationService,
+)
 from findupdates.pipeline.__main__ import main
 from findupdates.pipeline.assess import AssessOptions, assess_collected
 from findupdates.risk.models import PolicyResult
@@ -60,6 +66,7 @@ class PipelineAssessTests(unittest.TestCase):
                     output_dir=root / "out",
                     store=store,
                     skip_enrichment=True,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -85,6 +92,7 @@ class PipelineAssessTests(unittest.TestCase):
                 inventory=_write_inventory(root),
                 store=store,
                 skip_enrichment=True,
+                skip_notify=True,
             )
             first = assess_collected(options, now=NOW)
             second = assess_collected(options, now=NOW)
@@ -103,6 +111,7 @@ class PipelineAssessTests(unittest.TestCase):
                     inventory=_write_inventory(root),
                     store=store,
                     skip_enrichment=True,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -127,6 +136,7 @@ class PipelineAssessTests(unittest.TestCase):
                     inventory=inventory,
                     store=MemoryChangeStore(),
                     skip_enrichment=True,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -146,6 +156,7 @@ class PipelineAssessTests(unittest.TestCase):
                     inventory=_write_inventory(root),
                     store=MemoryChangeStore(),
                     skip_enrichment=True,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -162,6 +173,7 @@ class PipelineAssessTests(unittest.TestCase):
                     inventory=_write_inventory(root, stale=True),
                     store=store,
                     skip_enrichment=True,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -201,6 +213,13 @@ class PipelineAssessTests(unittest.TestCase):
             summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(len(summary["changes"]), 1)
             self.assertIsNone(summary["changes"][0]["issue_number"])
+            self.assertTrue(summary["changes"][0]["notified"])
+            self.assertFalse(summary["changes"][0]["notification_suppressed"])
+            notes = list((out / "notifications").glob("*.json"))
+            self.assertEqual(len(notes), 1)
+            payload = json.loads(notes[0].read_text(encoding="utf-8"))
+            self.assertNotIn("token", payload)
+            self.assertTrue(payload["acknowledgement_required"])
 
 
 def _enrichment_service(*, kev_name: str | None = None, down: bool = False) -> EnrichmentService:
@@ -239,6 +258,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     inventory=_write_inventory(root),
                     store=baseline,
                     skip_enrichment=True,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -253,6 +273,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     output_dir=out,
                     store=listed,
                     enrichment=service,
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -273,6 +294,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     inventory=_write_inventory(root),
                     store=store,
                     enrichment=_enrichment_service(kev_name="kev-empty.json"),
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
@@ -289,12 +311,146 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     inventory=_write_inventory(root),
                     store=store,
                     enrichment=_enrichment_service(down=True),
+                    skip_notify=True,
                 ),
                 now=NOW,
             )
         self.assertEqual(run.exit_code, 0)
         self.assertEqual(run.changes[0].known_exploited, TriState.UNKNOWN.value)
         self.assertEqual(run.changes[0].policy_result, PolicyResult.REQUIRE_APPROVAL.value)
+
+
+WEBHOOK_URL = "https://example.test/hooks/findupdates"
+
+
+class PipelineAssessNotifyTests(unittest.TestCase):
+    def test_microsoft_high_emits_and_keeps_policy(self) -> None:
+        store = MemoryChangeStore()
+        github = GitHubCommentChannel()
+        log = MemoryNotificationLog()
+        notifications = NotificationService({"github": github, "webhook": github}, log=log)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            out = root / "out"
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, microsoft_advisory()),
+                    inventory=_write_inventory(root),
+                    output_dir=out,
+                    store=store,
+                    skip_enrichment=True,
+                    notifications=notifications,
+                    environ={},
+                ),
+                now=NOW,
+            )
+            notes = list((out / "notifications").glob("*.json"))
+            payload = json.loads(notes[0].read_text(encoding="utf-8"))
+        self.assertEqual(run.exit_code, 0)
+        row = run.changes[0]
+        self.assertEqual(row.policy_result, PolicyResult.REQUIRE_APPROVAL.value)
+        self.assertTrue(row.notified)
+        self.assertFalse(row.notification_suppressed)
+        self.assertTrue(any("notify=emitted" in note for note in run.notes))
+        self.assertEqual(len(log.events), 1)
+        event = next(iter(log.events.values()))
+        self.assertTrue(event.acknowledgement_required)
+        self.assertEqual(len(github.sink), 2)
+        self.assertEqual(len(notes), 1)
+        self.assertNotIn("token", payload)
+        self.assertNotIn("token", json.dumps(payload))
+        stored = store.get(row.idempotency_key)
+        self.assertIsNotNone(stored)
+        assert stored is not None
+        self.assertEqual(stored.policy_result, row.policy_result)
+
+    def test_second_assess_is_fingerprint_suppressed(self) -> None:
+        store = MemoryChangeStore()
+        github = GitHubCommentChannel()
+        log = MemoryNotificationLog()
+        notifications = NotificationService({"github": github, "webhook": github}, log=log)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            options = AssessOptions(
+                advisories=_write_advisories(root, microsoft_advisory()),
+                inventory=_write_inventory(root),
+                store=store,
+                skip_enrichment=True,
+                notifications=notifications,
+                environ={},
+            )
+            first = assess_collected(options, now=NOW)
+            second = assess_collected(options, now=NOW)
+        self.assertTrue(first.changes[0].notified)
+        self.assertFalse(first.changes[0].notification_suppressed)
+        self.assertFalse(second.changes[0].notified)
+        self.assertTrue(second.changes[0].notification_suppressed)
+        self.assertEqual(len(log.events), 1)
+        self.assertEqual(len(github.sink), 2)
+        self.assertTrue(any("notify=suppressed" in note for note in second.notes))
+        self.assertEqual(first.changes[0].policy_result, second.changes[0].policy_result)
+
+    def test_skip_notify_does_not_require_webhook_or_token(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            advisories = _write_advisories(root, microsoft_advisory())
+            inventory = _write_inventory(root)
+            out = root / "out"
+            code = main(
+                [
+                    "assess",
+                    "--advisories",
+                    str(advisories),
+                    "--inventory",
+                    str(inventory),
+                    "--output-dir",
+                    str(out),
+                    "--store",
+                    "github",
+                    "--dry-run",
+                    "--skip-enrichment",
+                    "--skip-notify",
+                ],
+                environ={},
+            )
+            self.assertEqual(code, 0)
+            summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+            self.assertIsNone(summary["changes"][0]["notified"])
+            self.assertIsNone(summary["changes"][0]["notification_suppressed"])
+            self.assertFalse((out / "notifications").exists())
+
+    def test_webhook_503_does_not_abort_or_rewrite_policy(self) -> None:
+        store = MemoryChangeStore()
+        transport = MappingWebhookTransport({WEBHOOK_URL: [503, 503, 503]})
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            out = root / "out"
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, microsoft_advisory()),
+                    inventory=_write_inventory(root),
+                    output_dir=out,
+                    store=store,
+                    skip_enrichment=True,
+                    webhook_transport=transport,
+                    environ={"FINDUPDATES_NOTIFICATION_WEBHOOK_URL": WEBHOOK_URL},
+                ),
+                now=NOW,
+            )
+            notes = list((out / "notifications").glob("*.json"))
+            payload = json.loads(notes[0].read_text(encoding="utf-8"))
+            artifact = notes[0].read_text(encoding="utf-8")
+        self.assertEqual(run.exit_code, 0)
+        self.assertEqual(run.changes[0].policy_result, PolicyResult.REQUIRE_APPROVAL.value)
+        self.assertTrue(run.changes[0].notified)
+        self.assertTrue(any("notify=failed:webhook" in note for note in run.notes))
+        self.assertEqual(len(transport.bodies), 3)
+        self.assertNotIn("token", payload)
+        self.assertNotIn(WEBHOOK_URL, artifact)
+        stored = store.get(run.changes[0].idempotency_key)
+        self.assertIsNotNone(stored)
+        assert stored is not None
+        self.assertEqual(stored.policy_result, PolicyResult.REQUIRE_APPROVAL.value)
 
 
 if __name__ == "__main__":

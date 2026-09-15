@@ -12,6 +12,7 @@ python -m findupdates.pipeline assess --advisories .findupdates/out --inventory 
 python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --output-dir .findupdates/changes --store memory
 python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --store github --repository owner/repo
 python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --output-dir .findupdates/changes --skip-enrichment
+python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --output-dir .findupdates/changes --dry-run --skip-notify
 ```
 
 `--advisories` is the collector output directory from #52 (`msrc/*.json`,
@@ -32,6 +33,19 @@ KEV listing can raise `known_exploited` to true; absence from KEV never forces
 false. Vendor `affected_products` are unchanged. Outages keep last-known cache
 or stay unknown; they do not abort assess.
 
+Issue #61 emits a severity-aware notification after each upsert via
+`NotificationService.notify_advisory`. The GitHub channel is the in-memory
+comment formatter from #25; this command does not POST Issue comments through
+the Issues API. An optional webhook is read from
+`FINDUPDATES_NOTIFICATION_WEBHOOK_URL` at request time and is never stored on
+the change record or in Settings. `--dry-run` maps the webhook slot onto that
+in-memory formatter so HIGH+ still emits without HTTP. `--skip-notify` skips
+notifications entirely. Unchanged rescans with the same fingerprint are
+suppressed in-process. HIGH/CRITICAL/EMERGENCY still require acknowledgement in
+the event model; this issue does not add an ack CLI. Notification JSON is
+written under `--output-dir/notifications/` when output-dir is set. Delivery
+failure is recorded; it does not abort assess or rewrite `policy_result`.
+
 ## Fail-closed behavior
 
 - Unreadable or malformed advisory JSON exits non-zero and does not upsert.
@@ -43,13 +57,17 @@ or stay unknown; they do not abort assess.
   HOLD/BLOCK.
 - An advisory that does not match with strong identity still produces a record.
   Unknown applicability is BLOCK; it is never a silent “no updates” skip.
-- Tokens are not written into advisory, inventory, or change-record JSON.
+- Tokens are not written into advisory, inventory, change-record, or
+  notification JSON. Webhook URLs that embed a credential are not logged or
+  written into artifacts.
 - NVD API keys are never sent to CISA.
+- A missing or failing webhook is a delivery failure, not an assess abort.
 
 ## What this issue does not do
 
-Assess does not poll vendors, send notifications, run lab
-validation, or invoke a deployment adapter. GitHub Actions `collect.yml` stays
-`--dry-run` only. Promotion still uses
+Assess does not poll vendors, run lab validation, or invoke a deployment
+adapter. It does not post live GitHub Issue comments, persist a cross-process
+notification log, or add an acknowledgement CLI. GitHub Actions `collect.yml`
+stays `--dry-run` only. Promotion still uses
 `python -m findupdates.changerecords.workflow` and still reads policy from the
 stored record.
