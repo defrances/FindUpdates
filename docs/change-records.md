@@ -36,4 +36,15 @@ Create those Environments in the repository settings with required reviewers on
 allows it. Deployment credentials belong on the Environment, issued through OIDC,
 not as long-lived workflow secrets.
 
+## Issues API adapter
+
+Issue #54 adds `GitHubChangeStore` and `python -m findupdates.changerecords upsert`.
+The adapter searches Issues by the idempotency-key label, creates when none exist,
+and PATCHes when exactly one match exists. Two Issues with the same key fail closed.
+Tokens come from `FINDUPDATES_GITHUB_TOKEN` or `GH_TOKEN` at request time and are
+never stored on the change record or in Settings. The API host is fixed to
+`https://api.github.com`. `--dry-run` prints the payload and does not call GitHub.
+
+CI and the MVP demo keep `MemoryChangeStore`. This adapter does not deploy updates.
+
 MVP handoff remains simulated/non-production.

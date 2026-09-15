@@ -37,10 +37,10 @@ class MemoryChangeStore:
         if existing is None:
             issue = self._next_issue
             self._next_issue += 1
-            stored = _with_issue(record, issue)
+            stored = with_github_issue(record, issue)
             self._by_key[record.idempotency_key] = stored
             return UpsertResult(stored, True, issue)
-        stored = _with_issue(
+        stored = with_github_issue(
             record,
             existing.github_issue_number or self._next_issue,
         )
@@ -70,7 +70,8 @@ def load_from_issue_body(body: str) -> ChangeRecord:
     return parse_issue_body(body)
 
 
-def _with_issue(record: ChangeRecord, issue_number: int) -> ChangeRecord:
+def with_github_issue(record: ChangeRecord, issue_number: int) -> ChangeRecord:
+    """Stamp the GitHub Issue number onto a change record."""
     return ChangeRecord(
         change_id=record.change_id,
         idempotency_key=record.idempotency_key,

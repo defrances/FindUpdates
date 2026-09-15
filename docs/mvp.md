@@ -8,7 +8,7 @@ demo. CI runs `tests/integration/test_mvp.py` with synthetic fixtures only.
 Simulated: vendor HTTP (fixtures on disk), Intune/OEM backends
 (`MockDeploymentAdapter`), lab devices (`SimulatedTarget`), post-deploy
 heartbeats (`simulate_healthy` / failure injectors), GitHub Issues
-(`MemoryChangeStore`).
+(`MemoryChangeStore`; GitHub Issues upsert is #54 and is not required for the demo).
 
 Not production-ready: live collector polling against vendor networks from GitHub
 Actions (the #52 runner is dry-run there; operators poll locally), GitHub

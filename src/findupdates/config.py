@@ -32,6 +32,7 @@ class Settings:
     ai_provider: str = "offline"
     checkpoint_dir: str = ".findupdates/checkpoints"
     collection_output_dir: str | None = None
+    github_repository: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -66,6 +67,7 @@ class Settings:
             or "offline",
             checkpoint_dir=os.getenv("FINDUPDATES_CHECKPOINT_DIR", ".findupdates/checkpoints"),
             collection_output_dir=os.getenv("FINDUPDATES_COLLECTION_OUTPUT_DIR") or None,
+            github_repository=os.getenv("FINDUPDATES_GITHUB_REPOSITORY") or None,
         )
 
 
