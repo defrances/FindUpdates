@@ -1,0 +1,18 @@
+name: Change record
+description: Auditable FindUpdates change for one advisory and deployment group
+title: "[change] "
+labels: ["findupdates-change"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Machine-readable payload lives between the HTML comment markers.
+        Do not edit `policy_result` by hand to bypass HOLD/BLOCK.
+  - type: textarea
+    id: record
+    attributes:
+      label: Change record JSON
+      description: Paste the generated ChangeRecord v1 document.
+      render: json
+    validations:
+      required: true

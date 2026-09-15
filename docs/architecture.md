@@ -43,6 +43,8 @@ Risk scoring is a versioned, deterministic function of advisory, inventory, appl
 
 AI output is advisory evidence, not an authorization signal. Applicability, risk score, hard gates, approvals and target scope must remain deterministic and independently auditable. If a model provider is unavailable, a template still emits the analysis schema and the safety path continues. Vendor advisory text is untrusted data in the model payload and cannot invoke tools.
 
+GitHub Issues store one change record per advisory and deployment group. Promotion workflows read `policy_result` from that record; HOLD/BLOCK cannot be overridden by a dispatch input. Canary and production jobs require GitHub Environments. Pull requests do not run the promotion workflow.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification

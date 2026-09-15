@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/change-record/v1.schema.json",
+  "title": "ChangeRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "change_id",
+    "idempotency_key",
+    "lifecycle",
+    "advisory_ids",
+    "device_ids",
+    "deployment_group",
+    "risk_score",
+    "severity",
+    "policy_result",
+    "vendor",
+    "evidence_links",
+    "validation_plan",
+    "rollout_plan",
+    "overrides",
+    "github_issue_number",
+    "updated_at"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "change_id": {"$ref": "#/$defs/nonEmptyString"},
+    "idempotency_key": {"$ref": "#/$defs/nonEmptyString"},
+    "lifecycle": {
+      "type": "string",
+      "enum": [
+        "detected",
+        "assessed",
+        "validation_requested",
+        "validation_passed",
+        "awaiting_approval",
+        "canary",
+        "staged_rollout",
+        "completed",
+        "held",
+        "failed"
+      ]
+    },
+    "advisory_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "device_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "deployment_group": {"$ref": "#/$defs/nonEmptyString"},
+    "risk_score": {"type": "integer", "minimum": 0, "maximum": 100},
+    "severity": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "EMERGENCY"]
+    },
+    "policy_result": {
+      "type": "string",
+      "enum": ["ALLOW_ANALYSIS", "REQUIRE_VALIDATION", "REQUIRE_APPROVAL", "HOLD", "BLOCK"]
+    },
+    "vendor": {"$ref": "#/$defs/nonEmptyString"},
+    "evidence_links": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "validation_plan": {"$ref": "#/$defs/nonEmptyString"},
+    "rollout_plan": {"$ref": "#/$defs/nonEmptyString"},
+    "overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actor", "timestamp", "reason", "from_lifecycle", "to_lifecycle"],
+        "properties": {
+          "actor": {"$ref": "#/$defs/nonEmptyString"},
+          "timestamp": {"type": "string", "format": "date-time"},
+          "reason": {"$ref": "#/$defs/nonEmptyString"},
+          "from_lifecycle": {"$ref": "#/$defs/nonEmptyString"},
+          "to_lifecycle": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    },
+    "github_issue_number": {"type": ["integer", "null"], "minimum": 1},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

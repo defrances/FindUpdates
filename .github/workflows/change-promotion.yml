@@ -1,0 +1,81 @@
+name: Change promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      idempotency_key:
+        description: Idempotency key of the GitHub change-record Issue
+        required: true
+        type: string
+      target_environment:
+        description: Target GitHub Environment. Policy is never taken from this form.
+        required: true
+        type: choice
+        options:
+          - lab
+          - canary
+          - production
+      record_path:
+        description: Path to the committed or downloaded change-record JSON
+        required: true
+        type: string
+
+# No pull_request trigger: untrusted PR code must not see production environment secrets.
+permissions:
+  contents: read
+  issues: read
+  id-token: write
+
+concurrency:
+  group: findupdates-change-${{ inputs.idempotency_key }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      target: ${{ inputs.target_environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Enforce stored policy
+        env:
+          PYTHONPATH: src
+          FINDUPDATES_RECORD_PATH: ${{ github.event.inputs.record_path }}
+          FINDUPDATES_TARGET_ENVIRONMENT: ${{ github.event.inputs.target_environment }}
+        run: python -m findupdates.changerecords.workflow "$FINDUPDATES_RECORD_PATH" "$FINDUPDATES_TARGET_ENVIRONMENT"
+
+  lab:
+    needs: gate
+    if: github.event.inputs.target_environment == 'lab'
+    runs-on: ubuntu-latest
+    environment: lab
+    timeout-minutes: 10
+    steps:
+      - name: Simulated lab handoff
+        run: echo "Lab environment reached after policy gate. No production credentials are loaded."
+
+  canary:
+    needs: gate
+    if: github.event.inputs.target_environment == 'canary'
+    runs-on: ubuntu-latest
+    environment: canary
+    timeout-minutes: 10
+    steps:
+      - name: Simulated canary handoff
+        run: echo "Canary environment requires GitHub Environment reviewers. Adapter is simulated."
+
+  production:
+    needs: gate
+    if: github.event.inputs.target_environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Simulated production handoff
+        run: echo "Production job cannot start until Environment approval. OIDC is requested; no long-lived deploy secrets are in this workflow."
