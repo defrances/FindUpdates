@@ -1,0 +1,40 @@
+{
+  "DocumentTitle": {"Value": "September 2026 Security Updates"},
+  "ProductTree": {
+    "Branch": {
+      "Items": [
+        {
+          "Name": "Microsoft",
+          "Items": [
+            {
+              "ProductID": "win11-24h2-x64",
+              "Value": "Windows 11 Version 24H2 for x64-based Systems"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "Vulnerability": [
+    {
+      "Title": {"Value": "Synthetic Windows Remote Code Execution Vulnerability"},
+      "CVE": "CVE-2026-9999",
+      "Notes": [
+        {"Title": "Description", "Value": "Synthetic captured fixture for deterministic parser tests."},
+        {"Title": "Workaround", "Value": "Restrict access to the affected service until validation completes."}
+      ],
+      "ProductStatuses": [
+        {"Type": "Known Affected", "ProductID": ["win11-24h2-x64"]}
+      ],
+      "Remediations": [
+        {
+          "Type": "Vendor Fix",
+          "Description": {"Value": "KB5069999"},
+          "URL": "https://support.microsoft.com/help/5069999",
+          "ProductID": ["win11-24h2-x64"],
+          "RestartRequired": {"Value": "Yes"}
+        }
+      ]
+    }
+  ]
+}

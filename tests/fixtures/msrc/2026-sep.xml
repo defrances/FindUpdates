@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cvrfdoc xmlns="http://www.icasi.org/CVRF/schema/cvrf/1.1" xmlns:prod="http://www.icasi.org/CVRF/schema/prod/1.1" xmlns:vuln="http://www.icasi.org/CVRF/schema/vuln/1.1">
+  <DocumentTitle>September 2026 Security Updates</DocumentTitle>
+  <prod:ProductTree>
+    <prod:Branch Type="Vendor" Name="Microsoft">
+      <prod:FullProductName ProductID="win11-24h2-x64">Windows 11 Version 24H2 for x64-based Systems</prod:FullProductName>
+    </prod:Branch>
+  </prod:ProductTree>
+  <vuln:Vulnerability Ordinal="1">
+    <vuln:Title>Synthetic Windows Remote Code Execution Vulnerability</vuln:Title>
+    <vuln:Notes>
+      <vuln:Note Title="Description" Type="Description">Synthetic captured fixture for deterministic XML parser tests.</vuln:Note>
+      <vuln:Note Title="Workaround" Type="Other">Restrict access to the affected service until validation completes.</vuln:Note>
+    </vuln:Notes>
+    <vuln:CVE>CVE-2026-9999</vuln:CVE>
+    <vuln:ProductStatuses>
+      <vuln:Status Type="Known Affected">
+        <vuln:ProductID>win11-24h2-x64</vuln:ProductID>
+      </vuln:Status>
+    </vuln:ProductStatuses>
+    <vuln:Remediations>
+      <vuln:Remediation Type="Vendor Fix">
+        <vuln:Description>KB5069999</vuln:Description>
+        <vuln:URL>https://support.microsoft.com/help/5069999</vuln:URL>
+        <vuln:ProductID>win11-24h2-x64</vuln:ProductID>
+        <vuln:RestartRequired>Yes</vuln:RestartRequired>
+      </vuln:Remediation>
+    </vuln:Remediations>
+  </vuln:Vulnerability>
+</cvrfdoc>

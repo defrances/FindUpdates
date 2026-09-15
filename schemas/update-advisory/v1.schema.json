@@ -4,17 +4,96 @@
   "title": "UpdateAdvisory",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "advisory_id", "vendor", "source", "title", "published_at", "raw_sha256"],
+  "required": [
+    "schema_version",
+    "advisory_id",
+    "source_advisory_id",
+    "vendor",
+    "source",
+    "title",
+    "description",
+    "published_at",
+    "revised_at",
+    "cve_ids",
+    "kb_ids",
+    "vendor_severity",
+    "affected_products",
+    "fixed_versions",
+    "reboot_required",
+    "known_issues",
+    "prerequisites",
+    "workarounds",
+    "references",
+    "raw_sha256",
+    "collected_at",
+    "parser_version"
+  ],
+  "$defs": {
+    "affectedProduct": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_id", "name", "architecture", "version"],
+      "properties": {
+        "product_id": {"type": "string", "minLength": 1},
+        "name": {"type": ["string", "null"], "minLength": 1},
+        "architecture": {"type": ["string", "null"], "minLength": 1},
+        "version": {"type": ["string", "null"], "minLength": 1}
+      }
+    }
+  },
   "properties": {
     "schema_version": {"const": "1.0"},
     "advisory_id": {"type": "string", "minLength": 1},
+    "source_advisory_id": {"type": "string", "minLength": 1},
     "vendor": {"type": "string", "enum": ["microsoft", "intel", "other"]},
     "source": {"type": "string", "minLength": 1},
     "title": {"type": "string", "minLength": 1},
+    "description": {"type": ["string", "null"], "minLength": 1},
     "published_at": {"type": "string", "format": "date-time"},
     "revised_at": {"type": ["string", "null"], "format": "date-time"},
-    "cve_ids": {"type": "array", "items": {"type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"}, "uniqueItems": true},
-    "references": {"type": "array", "items": {"type": "string", "format": "uri"}, "uniqueItems": true},
-    "raw_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    "cve_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"},
+      "uniqueItems": true
+    },
+    "kb_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^KB[0-9]{6,8}$"},
+      "uniqueItems": true
+    },
+    "vendor_severity": {"type": ["string", "null"], "minLength": 1},
+    "affected_products": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/affectedProduct"}
+    },
+    "fixed_versions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "reboot_required": {"type": ["boolean", "null"]},
+    "known_issues": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "workarounds": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "references": {
+      "type": "array",
+      "items": {"type": "string", "format": "uri"},
+      "uniqueItems": true
+    },
+    "raw_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "parser_version": {"type": "string", "minLength": 1}
   }
 }
