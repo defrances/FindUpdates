@@ -27,6 +27,26 @@ class DeviceInventorySchemaTests(unittest.TestCase):
 
         self.assertEqual([], errors)
 
+    def test_synthetic_workstation_catalog_validates(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        catalog = json.loads(
+            (REPO_ROOT / "configs" / "inventory" / "synthetic-workstations.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        validator = jsonschema.Draft202012Validator(
+            schema,
+            format_checker=jsonschema.FormatChecker(),
+        )
+        devices = catalog["devices"]
+        self.assertGreaterEqual(len(devices), 4)
+        ids = {item["device_id"] for item in devices}
+        self.assertIn("SYNTHETIC-CT-IMG-01", ids)
+        errors = []
+        for item in devices:
+            errors.extend(list(validator.iter_errors(item)))
+        self.assertEqual([], errors)
+
     def test_missing_clinical_criticality_is_rejected(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         example = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))

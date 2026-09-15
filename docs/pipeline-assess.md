@@ -61,6 +61,14 @@ The detect Job Summary opens with that briefing. Change records cite
 `analysis:<id>` and reuse Change Planning as `validation_plan`. Notifications
 may echo that planning text; they cannot rewrite HOLD/BLOCK.
 
+Issue #69 adds a synthetic non-PHI workstation catalog
+(`configs/inventory/synthetic-workstations.json`) and a per-station
+recommendation report (`recommendations.md`). The report names which package
+is in scope for which station, with a deterministic explanation and an
+allow-listed official vendor URL. It does not authorize installation.
+GitHub Actions live detect uses that catalog. Job Summary leads with the
+station report and omits the full AI briefing so the Summary stays under 1 MB.
+
 ## Fail-closed behavior
 
 - Unreadable or malformed advisory JSON exits non-zero and does not upsert.

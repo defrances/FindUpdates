@@ -213,16 +213,17 @@ See [docs/pipeline-assess.md](docs/pipeline-assess.md).
 
 ```bash
 python -m findupdates.pipeline detect --source fixtures --output-dir .findupdates/detect
-python -m findupdates.pipeline detect --source live --inventory configs/device-models/example-windows-intel-device.json --output-dir .findupdates/detect
+python -m findupdates.pipeline detect --source live --inventory configs/inventory/synthetic-workstations.json --output-dir .findupdates/detect
 ```
 
-Fixture mode writes synthetic advisories and a matching non-PHI imaging
-workstation. Live mode requires `--inventory` and polls MSRC/Intel. Detect
-always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV.
+Fixture mode writes synthetic advisories and the synthetic workstation catalog
+(refreshed timestamps). Live mode requires `--inventory` and polls MSRC/Intel.
+Detect always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV.
 
 On GitHub: **Actions → Detect updates → Run workflow**. Default source is
-`fixtures`. The markdown report (starting with the Agentic AI analysis of
-updates) is appended to the Job Summary; artifacts are retained for 14 days.
+`fixtures`. Live uses `configs/inventory/synthetic-workstations.json`. The Job
+Summary leads with per-station recommendations (package, explanation, official
+URL) and is not an install authorization. Artifacts are retained for 14 days.
 
 ### MVP end-to-end demo
 

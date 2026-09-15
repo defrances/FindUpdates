@@ -34,11 +34,15 @@ class PipelineDetectTests(unittest.TestCase):
             run_json = json.loads(
                 (root / "assess" / "analysis" / "run.json").read_text(encoding="utf-8")
             )
+            recs = json.loads(
+                (root / "assess" / "recommendations.json").read_text(encoding="utf-8")
+            )
+            rec_md = (root / "assess" / "recommendations.md").read_text(encoding="utf-8")
         self.assertEqual(run.exit_code, 0)
         self.assertEqual(run.source, "fixtures")
-        policies = {item["advisory_id"]: item["policy_result"] for item in summary["changes"]}
-        self.assertIn(PolicyResult.REQUIRE_APPROVAL.value, policies.values())
-        self.assertIn(PolicyResult.BLOCK.value, policies.values())
+        policies = {item["policy_result"] for item in summary["changes"]}
+        self.assertIn(PolicyResult.REQUIRE_APPROVAL.value, policies)
+        self.assertIn(PolicyResult.BLOCK.value, policies)
         self.assertTrue(all(item["analyzed"] for item in summary["changes"]))
         self.assertTrue(all(item["notified"] for item in summary["changes"]))
         self.assertGreaterEqual(len(analyses), 2)
@@ -47,13 +51,19 @@ class PipelineDetectTests(unittest.TestCase):
         self.assertNotIn("token", run_json)
         self.assertEqual(run_json["item_count"], len(analyses))
         self.assertIn("FindUpdates detect", report)
-        self.assertIn("Agentic AI analysis of updates", report)
+        self.assertIn("Station update recommendations", report)
+        self.assertIn("SYNTHETIC-CT-IMG-01", report)
+        self.assertIn("candidate_for_validation", report)
+        self.assertIn("KB5060001", report)
+        self.assertIn(
+            "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-12345",
+            report,
+        )
+        self.assertIn("Station update recommendations", rec_md)
+        self.assertNotIn("token", recs)
+        listed_actions = {item["action"] for item in recs["items"]}
+        self.assertIn("candidate_for_validation", listed_actions)
         self.assertIn("Agentic AI analysis of updates", briefing)
-        self.assertIn("Policy snapshot", briefing)
-        for advisory_id, policy in policies.items():
-            self.assertIn(advisory_id, briefing)
-            self.assertIn(f"policy=`{policy}`", briefing)
-        self.assertIn("Notifications", report)
         self.assertNotIn("token", report.lower())
 
     def test_cli_detect_fixtures_does_not_require_keys(self) -> None:
@@ -63,8 +73,8 @@ class PipelineDetectTests(unittest.TestCase):
             report = (root / "report.md").read_text(encoding="utf-8")
         self.assertEqual(code, 0)
         self.assertIn("FindUpdates detect", report)
-        self.assertIn("Agentic AI analysis of updates", report)
-        self.assertIn("Notifications", report)
+        self.assertIn("Station update recommendations", report)
+        self.assertIn("KB5060001", report)
 
 
 if __name__ == "__main__":

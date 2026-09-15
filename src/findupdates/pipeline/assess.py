@@ -58,6 +58,12 @@ from findupdates.notifications.models import DeliveryStatus, NotifyResult
 from findupdates.notifications.serialize import event_to_dict
 from findupdates.notifications.service import NotificationService
 from findupdates.pipeline.errors import AssessError
+from findupdates.pipeline.recommend import (
+    StationRecommendation,
+    recommend_station,
+    recommendations_to_dict,
+    render_station_report,
+)
 from findupdates.risk import assess as assess_risk
 from findupdates.risk.models import PolicyResult, RiskAssessment
 
@@ -256,6 +262,25 @@ def write_update_briefing(output_dir: Path, briefing: UpdateBriefing) -> None:
     (folder / "updates.md").write_text(briefing.markdown, encoding="utf-8")
 
 
+def write_recommendations(
+    output_dir: Path,
+    rows: tuple[StationRecommendation, ...],
+    *,
+    correlation_id: str,
+) -> None:
+    """Write per-station recommendations. Token fields are refused."""
+    payload = recommendations_to_dict(rows, correlation_id=correlation_id)
+    if "token" in payload:
+        raise AssessError("refusing to write recommendation JSON that contains a token field")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "recommendations.json").write_text(
+        json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    markdown = render_station_report(rows, correlation_id=correlation_id)
+    (output_dir / "recommendations.md").write_text(markdown, encoding="utf-8")
+
+
 def write_notification(output_dir: Path, result: NotifyResult) -> None:
     """Write notification artifacts. Token fields are refused."""
     if result.event is None:
@@ -289,6 +314,7 @@ def _assess_all(
     rows: list[AssessedChange] = []
     notes: list[str] = []
     brief_sources: list[BriefSource] = []
+    recommendations: list[StationRecommendation] = []
     for advisory in advisories:
         set_log_context(advisory_id=advisory.advisory_id, stage="assess")
         products_before = advisory.affected_products
@@ -312,6 +338,10 @@ def _assess_all(
                 risks,
                 options,
                 now,
+            )
+            recommendations.extend(
+                recommend_station(advisory, device, app, risk)
+                for device, app, risk in zip(members, apps, risks, strict=True)
             )
             policy_before = tuple(item.policy_result.value for item in risks)
             bound = _analysis_for_group(tuple(members), risks, analyses)
@@ -388,6 +418,12 @@ def _assess_all(
         write_update_briefing(
             options.output_dir,
             brief_updates(tuple(brief_sources), correlation_id=correlation_id, now=now),
+        )
+    if options.output_dir is not None and recommendations:
+        write_recommendations(
+            options.output_dir,
+            tuple(recommendations),
+            correlation_id=correlation_id,
         )
     return tuple(rows), notes
 

@@ -20,6 +20,7 @@ from findupdates.inventory.serialize import (
     dict_to_device,
     load_inventory,
 )
+from findupdates.inventory.workstations import catalog_path, load_synthetic_workstations
 
 __all__ = [
     "ClinicalCriticality",
@@ -33,9 +34,11 @@ __all__ = [
     "SoftwareComponent",
     "SoftwareKind",
     "VerificationState",
+    "catalog_path",
     "device_to_dict",
     "dict_to_device",
     "evaluate_freshness",
     "load_inventory",
+    "load_synthetic_workstations",
     "refresh_for_assessment",
 ]

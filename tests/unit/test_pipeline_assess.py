@@ -556,11 +556,15 @@ class PipelineAssessAiTests(unittest.TestCase):
             analysis_dir = out / "analysis"
             analysis_exists = analysis_dir.exists()
             briefing_exists = (analysis_dir / "updates.md").exists()
+            recs = json.loads((out / "recommendations.json").read_text(encoding="utf-8"))
+            rec_md = (out / "recommendations.md").read_text(encoding="utf-8")
         self.assertEqual(run.exit_code, 0)
         self.assertIsNone(run.changes[0].analyzed)
         self.assertFalse(analysis_exists)
         self.assertFalse(briefing_exists)
         self.assertTrue(all("ai=" not in note for note in run.notes))
+        self.assertNotIn("token", recs)
+        self.assertIn("Station update recommendations", rec_md)
 
 
 if __name__ == "__main__":

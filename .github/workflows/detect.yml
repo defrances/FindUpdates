@@ -52,7 +52,7 @@ jobs:
           if [ "${SOURCE}" = "live" ]; then
             python -m findupdates.pipeline detect \
               --source live \
-              --inventory configs/device-models/example-windows-intel-device.json \
+              --inventory configs/inventory/synthetic-workstations.json \
               --output-dir "${OUT}"
           else
             python -m findupdates.pipeline detect \

@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from findupdates.collectors.runner import PollOptions, poll
 from findupdates.config import Settings
-from findupdates.inventory import device_to_dict, refresh_for_assessment
-from findupdates.mvp.fixtures import imaging_workstation, intel_advisory, microsoft_advisory
+from findupdates.inventory import (
+    catalog_path,
+    device_to_dict,
+    load_inventory,
+    refresh_for_assessment,
+)
+from findupdates.mvp.fixtures import intel_advisory, microsoft_advisory
 from findupdates.normalization.serialize import advisory_to_dict
 from findupdates.pipeline.assess import AssessOptions, AssessRun, assess_collected
 from findupdates.pipeline.errors import AssessError
@@ -113,57 +119,52 @@ def detect_updates(options: DetectOptions, *, now: datetime) -> DetectRun:
 
 
 def render_detect_report(source: str, run: AssessRun, assess_dir: Path) -> str:
-    """Markdown Job Summary: Agentic AI analysis, changes, notify status."""
+    """Markdown Job Summary: station recommendations, then compact change counts."""
     lines = [
         "# FindUpdates detect",
         "",
         f"source=`{source}` correlation=`{run.correlation_id}` exit=`{run.exit_code}`",
         "",
-        "This job does not deploy updates. AI analysis is not an authorization.",
+        "This job does not deploy updates. Recommendations are not an authorization.",
         "",
     ]
-    briefing = assess_dir / "analysis" / "updates.md"
-    if briefing.is_file():
-        lines.append(briefing.read_text(encoding="utf-8").strip())
+    recs = assess_dir / "recommendations.md"
+    if recs.is_file():
+        lines.append(recs.read_text(encoding="utf-8").strip())
         lines.append("")
     else:
-        lines.extend(["## Agentic AI analysis of updates", "", "No analysis artifacts.", ""])
+        lines.extend(
+            [
+                "## Station update recommendations",
+                "",
+                "No station recommendation artifacts.",
+                "",
+            ]
+        )
     lines.append("## Changes")
     if not run.changes:
         lines.append("No change records. Empty or failed assess is not treated as not_affected.")
-    for item in run.changes:
-        ai = (
-            "skipped"
-            if item.analyzed is None
-            else ("fallback" if item.analysis_fallback else "emitted")
-        )
-        notify = (
-            "skipped"
-            if item.notified is None
-            else ("suppressed" if item.notification_suppressed else "emitted")
-        )
+    else:
+        policies = Counter(item.policy_result for item in run.changes)
         lines.append(
-            f"- `{item.advisory_id}` group=`{item.deployment_group}` "
-            f"verdicts={','.join(item.verdicts)} policy=`{item.policy_result}` "
-            f"score={item.risk_score} notify=`{notify}` ai=`{ai}`"
+            f"{len(run.changes)} change records. "
+            + ", ".join(f"{name}={count}" for name, count in sorted(policies.items()))
         )
-    lines.extend(["", "## Notifications"])
-    notify_dir = assess_dir / "notifications"
-    notices = sorted(notify_dir.glob("*.json")) if notify_dir.is_dir() else []
-    if not notices:
-        lines.append("No notification artifacts (skipped or suppressed).")
-    for path in notices:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        if "token" in payload:
-            continue
-        lines.append(
-            f"- `{payload.get('event_id')}` severity=`{payload.get('severity')}` "
-            f"policy=`{payload.get('policy_result')}` "
-            f"ack_required=`{payload.get('acknowledgement_required')}`"
-        )
-        action = payload.get("recommended_next_action")
-        if action:
-            lines.append(f"  {action}")
+        preview = run.changes[:12]
+        for item in preview:
+            lines.append(
+                f"- `{item.advisory_id}` group=`{item.deployment_group}` "
+                f"verdicts={','.join(item.verdicts)} policy=`{item.policy_result}` "
+                f"score={item.risk_score}"
+            )
+        extra = len(run.changes) - len(preview)
+        if extra:
+            lines.append(f"- … {extra} more change records in summary.json")
+    lines.extend(["", "## Artifacts"])
+    lines.append(
+        "Full bounded AI briefing is `assess/analysis/updates.md` in the job artifact. "
+        "It is omitted here so GitHub Job Summary stays under 1 MB."
+    )
     lines.append("")
     return "\n".join(lines)
 
@@ -183,11 +184,17 @@ def _write_fixture_advisories(output: Path) -> Path:
 
 def _write_fixture_inventory(output: Path, now: datetime) -> Path:
     path = output / "inventory.json"
-    device = refresh_for_assessment(
-        replace(imaging_workstation(), inventory_timestamp=now - timedelta(hours=2)),
-        now,
+    devices = tuple(
+        refresh_for_assessment(
+            replace(item, inventory_timestamp=now - timedelta(hours=2)),
+            now,
+        )
+        for item in load_inventory(catalog_path())
     )
-    payload = device_to_dict(device)
+    payload = {
+        "schema_version": "1.0",
+        "devices": [device_to_dict(item) for item in devices],
+    }
     path.write_text(
         json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
