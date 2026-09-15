@@ -12,6 +12,7 @@ class CollectionMetrics:
     unchanged: int = 0
     failed: int = 0
     parse_error: int = 0
+    skipped: int = 0
 
     def add(
         self,
@@ -21,6 +22,7 @@ class CollectionMetrics:
         unchanged: int = 0,
         failed: int = 0,
         parse_error: int = 0,
+        skipped: int = 0,
     ) -> CollectionMetrics:
         """Return a new metrics object with incremented counters."""
         return CollectionMetrics(
@@ -29,4 +31,5 @@ class CollectionMetrics:
             unchanged=self.unchanged + unchanged,
             failed=self.failed + failed,
             parse_error=self.parse_error + parse_error,
+            skipped=self.skipped + skipped,
         )

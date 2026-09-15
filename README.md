@@ -224,7 +224,8 @@ On GitHub: **Actions → Detect updates → Run workflow**. Default source is
 `fixtures`. Live uses `configs/inventory/synthetic-workstations.json`. The Job
 Summary leads with per-station markdown (package, explanation, official URL)
 and is not an install authorization. Open `report.html` in the artifact for the
-English HTML report. Artifacts are retained for 14 days.
+English HTML report. Live collection uses a **seven-day** lookback so one run
+does not assess a full historical MSRC dump. Artifacts are retained for 14 days.
 
 ### MVP end-to-end demo
 

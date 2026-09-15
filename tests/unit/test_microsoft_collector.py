@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -62,6 +62,20 @@ class MicrosoftCollectorTests(unittest.TestCase):
         self.assertIs(advisory.vendor_severity, VendorSeverity.HIGH)
         self.assertEqual(advisory.affected_products[0].builds, ("10.0.22621.4037",))
         self.assertEqual([], list(_validator().iter_errors(advisory_to_dict(advisory))))
+
+    def test_advisories_older_than_lookback_are_skipped(self) -> None:
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 30, 12, tzinfo=UTC),
+            lookback=timedelta(days=7),
+        )
+        body = (FIXTURES / "msrc-cvrf-windows.json").read_bytes()
+        result = collector.collect_documents([(MSRC_DOC, body)])
+        self.assertEqual(result.advisories, ())
+        self.assertEqual(result.metrics.collected, 0)
+        self.assertGreaterEqual(result.metrics.skipped, 1)
 
     def test_idempotent_reread_is_unchanged(self) -> None:
         collector = MicrosoftCollector(

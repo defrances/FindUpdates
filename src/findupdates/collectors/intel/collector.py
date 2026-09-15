@@ -22,12 +22,13 @@ from findupdates.collectors.jsonutil import (
     sha256_bytes,
     text_of,
 )
+from findupdates.collectors.lookback import advisory_in_lookback, window_start
 from findupdates.collectors.metrics import CollectionMetrics
 from findupdates.collectors.result import CollectionResult
 from findupdates.normalization.models import normalize_source_record
 
 LOGGER = logging.getLogger("findupdates.collectors.intel")
-DEFAULT_LOOKBACK = timedelta(days=120)
+DEFAULT_LOOKBACK = timedelta(days=7)
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,16 +125,21 @@ class IntelCollector:
                 metrics = metrics.add(parse_error=1)
                 continue
             advisory = normalize_source_record(record)
-            advisories.append(advisory)
             key = f"adv:{advisory.vendor_advisory_id or advisory.advisory_id}"
+            next_hashes[key] = record.provenance.raw_sha256
+            next_hashes[f"doc:{advisory.vendor_advisory_id or digest}"] = digest
+            if not advisory_in_lookback(
+                advisory, retrieved_at=collected_at, lookback=self._lookback
+            ):
+                metrics = metrics.add(skipped=1)
+                continue
+            advisories.append(advisory)
             previous = previous_hashes.get(key)
             metrics = metrics.add(collected=1)
             if previous == digest or previous == record.provenance.raw_sha256:
                 metrics = metrics.add(unchanged=1)
             else:
                 metrics = metrics.add(changed=1)
-            next_hashes[key] = record.provenance.raw_sha256
-            next_hashes[f"doc:{advisory.vendor_advisory_id or digest}"] = digest
         new_checkpoint = CollectionCheckpoint(
             source="intel-csaf",
             cursor=collected_at.isoformat().replace("+00:00", "Z"),
@@ -204,7 +210,7 @@ def _select_entries(
     lookback: timedelta,
 ) -> list[_IndexEntry]:
     if checkpoint is None:
-        start = retrieved_at - lookback
+        start = window_start(retrieved_at, lookback)
         return [entry for entry in entries if entry.updated_at >= start]
     cursor = parse_datetime(checkpoint.cursor)
     if cursor is None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -46,6 +46,21 @@ class IntelCollectorTests(unittest.TestCase):
         self.assertIs(advisory.known_exploited, TriState.UNKNOWN)
         self.assertIsNone(advisory.vendor_recommendation)
         self.assertEqual([], list(_validator().iter_errors(advisory_to_dict(advisory))))
+
+    def test_advisories_older_than_lookback_are_skipped(self) -> None:
+        collector = IntelCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            index_url=INDEX_URL,
+            now=datetime(2026, 9, 30, 12, tzinfo=UTC),
+            lookback=timedelta(days=7),
+        )
+        body = (FIXTURES / "intel-csaf-microcode.json").read_bytes()
+        result = collector.collect_documents([(DOC_URL, body)])
+        self.assertEqual(result.advisories, ())
+        self.assertEqual(result.metrics.collected, 0)
+        self.assertEqual(result.metrics.skipped, 1)
 
     def test_malformed_document_is_isolated(self) -> None:
         collector = IntelCollector(
@@ -99,7 +114,7 @@ class IntelCollectorTests(unittest.TestCase):
                     {
                         "id": "INTEL-SA-01234",
                         "url": "https://untrusted.example.invalid/csaf/intel-sa-01234.json",
-                        "updated": "2026-08-19T00:00:00Z",
+                        "updated": "2026-09-12T00:00:00Z",
                     }
                 ]
             }

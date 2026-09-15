@@ -21,6 +21,7 @@ from findupdates.collectors.jsonutil import (
     sha256_bytes,
     text_of,
 )
+from findupdates.collectors.lookback import advisory_in_lookback, window_start
 from findupdates.collectors.metrics import CollectionMetrics
 from findupdates.collectors.microsoft.cvrf import parse_cvrf_document
 from findupdates.collectors.microsoft.xmlcvrf import parse_cvrf_xml
@@ -29,7 +30,8 @@ from findupdates.normalization.models import UpdateAdvisory, normalize_source_re
 
 LOGGER = logging.getLogger("findupdates.collectors.microsoft")
 DEFAULT_BASE_URL = "https://api.msrc.microsoft.com/cvrf/v3.0"
-DEFAULT_LOOKBACK = timedelta(days=45)
+DEFAULT_LOOKBACK = timedelta(days=7)
+DOCUMENT_LOOKBACK_FLOOR = timedelta(days=45)
 MSRC_API_VERSION = "2023-11-01"
 
 
@@ -59,7 +61,10 @@ class MicrosoftCollector:
     def collect(self, checkpoint: CollectionCheckpoint | None = None) -> CollectionResult:
         """Fetch the MSRC index, then documents in the lookback/revision window."""
         retrieved_at = self._now or datetime.now(UTC)
-        after = _incremental_after(checkpoint, retrieved_at=retrieved_at, lookback=self._lookback)
+        document_lookback = _document_lookback(self._lookback)
+        after = _incremental_after(
+            checkpoint, retrieved_at=retrieved_at, lookback=document_lookback
+        )
         index_url = updates_url(self._base_url, after=after)
         payload = self._client.get_json(index_url)
         entries = _index_entries(payload, base_url=self._base_url)
@@ -67,7 +72,7 @@ class MicrosoftCollector:
             entries,
             checkpoint=checkpoint,
             retrieved_at=retrieved_at,
-            lookback=self._lookback,
+            lookback=document_lookback,
         )
         documents: list[tuple[str, bytes, str]] = []
         failed = 0
@@ -130,15 +135,20 @@ class MicrosoftCollector:
             next_hashes[f"doc:{document_id}"] = digest
             for record in records:
                 advisory = normalize_source_record(record)
+                advisory_key = f"adv:{advisory.vendor_advisory_id or advisory.advisory_id}"
+                next_hashes[advisory_key] = record.provenance.raw_sha256
+                if not advisory_in_lookback(
+                    advisory, retrieved_at=collected_at, lookback=self._lookback
+                ):
+                    metrics = metrics.add(skipped=1)
+                    continue
                 advisories.append(advisory)
                 metrics = metrics.add(collected=1)
-                advisory_key = f"adv:{advisory.vendor_advisory_id or advisory.advisory_id}"
                 previous_advisory = previous_hashes.get(advisory_key)
                 if document_unchanged or previous_advisory == record.provenance.raw_sha256:
                     metrics = metrics.add(unchanged=1)
                 else:
                     metrics = metrics.add(changed=1)
-                next_hashes[advisory_key] = record.provenance.raw_sha256
         new_checkpoint = CollectionCheckpoint(
             source="msrc",
             cursor=collected_at.isoformat().replace("+00:00", "Z"),
@@ -225,12 +235,16 @@ def _select_entries(
     lookback: timedelta,
 ) -> list[_IndexEntry]:
     if checkpoint is None:
-        start = retrieved_at - lookback
+        start = window_start(retrieved_at, lookback)
         return [entry for entry in entries if entry.current_release_date >= start]
     cursor = parse_datetime(checkpoint.cursor)
     if cursor is None:
         return entries
     return [entry for entry in entries if entry.current_release_date >= cursor]
+
+
+def _document_lookback(lookback: timedelta) -> timedelta:
+    return lookback if lookback >= DOCUMENT_LOOKBACK_FLOOR else DOCUMENT_LOOKBACK_FLOOR
 
 
 def _incremental_after(
@@ -240,6 +254,6 @@ def _incremental_after(
     lookback: timedelta,
 ) -> datetime:
     if checkpoint is None:
-        return retrieved_at - lookback
+        return window_start(retrieved_at, lookback)
     cursor = parse_datetime(checkpoint.cursor)
-    return cursor if cursor is not None else retrieved_at - lookback
+    return cursor if cursor is not None else window_start(retrieved_at, lookback)

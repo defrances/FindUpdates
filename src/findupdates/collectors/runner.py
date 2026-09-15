@@ -143,6 +143,7 @@ def write_summary(run: PollRun, output_dir: Path) -> Path:
                     "unchanged": item.metrics.unchanged,
                     "failed": item.metrics.failed,
                     "parse_error": item.metrics.parse_error,
+                    "skipped": item.metrics.skipped,
                 },
                 "alerts": [alert.code.value for alert in item.alerts],
                 "notes": list(item.notes),
@@ -254,7 +255,8 @@ def _poll_source(
             (
                 f"{source} collected={result.metrics.collected} "
                 f"changed={result.metrics.changed} unchanged={result.metrics.unchanged} "
-                f"failed={result.metrics.failed}"
+                f"skipped={result.metrics.skipped} failed={result.metrics.failed} "
+                f"lookback_days={_lookback_days(source, settings)}"
             ),
         ),
     )
@@ -283,6 +285,12 @@ def _collect(
         now=now,
     )
     return intel.collect(prior)
+
+
+def _lookback_days(source: str, settings: Settings) -> int:
+    if source == "msrc":
+        return settings.msrc_lookback_days
+    return settings.intel_lookback_days
 
 
 def _skip_reason(source: str, settings: Settings) -> str | None:
@@ -319,6 +327,7 @@ def _record_metrics(
         ("unchanged", metrics.unchanged),
         ("failed", metrics.failed),
         ("parse_error", metrics.parse_error),
+        ("skipped", metrics.skipped),
     ):
         metrics_bus.record(
             MetricSample(

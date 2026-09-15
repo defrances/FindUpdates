@@ -75,6 +75,10 @@ escaped. There is no third-party CSS or JavaScript. Official links remain
 allow-listed HTTPS only. The HTML is the operator artifact; Job Summary stays
 markdown.
 
+Issue #73 limits live detect collection to the last seven days of dated
+vendor updates. MSRC monthly CVRF files are still fetched; only advisories in
+that week are assessed. An empty week is not treated as not_affected.
+
 ## Fail-closed behavior
 
 - Unreadable or malformed advisory JSON exits non-zero and does not upsert.
