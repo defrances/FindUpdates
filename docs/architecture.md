@@ -49,6 +49,8 @@ Severity-aware notifications fan out from that change record. Unchanged rescans 
 
 Lab validation is a version-controlled profile per device model. Required FAIL, BLOCKED or INCONCLUSIVE outcomes block canary and production. Installer success is not a clinical-function pass.
 
+Deployment adapters execute only already-authorized requests. They verify the approved target-set hash and package identity, require short-lived OIDC credentials that are never stored on the request, and refuse unqualified Intel/OEM firmware. Unsupported rollback is an error, not a successful uninstall. Microsoft OS/driver channels are a separate capability set from OEM firmware agents.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification

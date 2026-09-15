@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/deployment-request/v1.schema.json",
+  "title": "DeploymentRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "idempotency_key",
+    "dry_run",
+    "update",
+    "targets",
+    "approved_target_set_hash",
+    "rollout",
+    "evidence",
+    "oem_qualified"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"$ref": "#/$defs/nonEmptyString"},
+    "idempotency_key": {"$ref": "#/$defs/nonEmptyString"},
+    "dry_run": {"type": "boolean"},
+    "update": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "package_id", "version", "sha256"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["os", "driver", "firmware", "bios", "microcode", "application"]
+        },
+        "package_id": {"$ref": "#/$defs/nonEmptyString"},
+        "version": {"$ref": "#/$defs/nonEmptyString"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["device_id", "backend"],
+        "properties": {
+          "device_id": {"$ref": "#/$defs/nonEmptyString"},
+          "backend": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    },
+    "approved_target_set_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "rollout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "ring"],
+      "properties": {
+        "environment": {"type": "string", "enum": ["lab", "canary", "production"]},
+        "ring": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "advisory_ids",
+        "risk_assessment_id",
+        "policy_result",
+        "change_idempotency_key",
+        "validation_result_id",
+        "approver",
+        "approved_at"
+      ],
+      "properties": {
+        "advisory_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "risk_assessment_id": {"$ref": "#/$defs/nonEmptyString"},
+        "policy_result": {
+          "type": "string",
+          "enum": ["ALLOW_ANALYSIS", "REQUIRE_VALIDATION", "REQUIRE_APPROVAL", "HOLD", "BLOCK"]
+        },
+        "change_idempotency_key": {"$ref": "#/$defs/nonEmptyString"},
+        "validation_result_id": {"$ref": "#/$defs/nonEmptyString"},
+        "approver": {"$ref": "#/$defs/nonEmptyString"},
+        "approved_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "oem_qualified": {"type": "boolean"}
+  }
+}

@@ -1,1 +1,82 @@
 """Approved deployment backend abstractions."""
+
+from findupdates.deployment.authorize import assert_credential, validate_request
+from findupdates.deployment.errors import (
+    AuthError,
+    AuthorizationMissing,
+    BackendRejected,
+    DeploymentError,
+    DeploymentTimeout,
+    FirmwareNotOemQualified,
+    PackageMismatch,
+    PartialFailure,
+    RollbackUnsupported,
+    TargetMismatch,
+    UnsupportedUpdateKind,
+)
+from findupdates.deployment.hashing import hash_targets, target_set_hash
+from findupdates.deployment.mock import MockDeploymentAdapter
+from findupdates.deployment.models import (
+    OEM_CAPABILITIES,
+    SCHEMA_VERSION,
+    WINDOWS_CAPABILITIES,
+    AdapterCapabilities,
+    AuthorizationEvidence,
+    DeploymentAudit,
+    DeploymentRequest,
+    DeploymentResult,
+    DeploymentStatus,
+    DeploymentTarget,
+    ErrorCode,
+    OidcCredential,
+    PackageIdentity,
+    RolloutPolicy,
+    UpdateKind,
+)
+from findupdates.deployment.prepare import make_idempotency_key, prepare
+from findupdates.deployment.serialize import (
+    dict_to_request,
+    dict_to_result,
+    request_to_dict,
+    result_to_dict,
+)
+
+__all__ = [
+    "OEM_CAPABILITIES",
+    "SCHEMA_VERSION",
+    "WINDOWS_CAPABILITIES",
+    "AdapterCapabilities",
+    "AuthError",
+    "AuthorizationEvidence",
+    "AuthorizationMissing",
+    "BackendRejected",
+    "DeploymentAudit",
+    "DeploymentError",
+    "DeploymentRequest",
+    "DeploymentResult",
+    "DeploymentStatus",
+    "DeploymentTarget",
+    "DeploymentTimeout",
+    "ErrorCode",
+    "FirmwareNotOemQualified",
+    "MockDeploymentAdapter",
+    "OidcCredential",
+    "PackageIdentity",
+    "PackageMismatch",
+    "PartialFailure",
+    "RollbackUnsupported",
+    "RolloutPolicy",
+    "TargetMismatch",
+    "UnsupportedUpdateKind",
+    "UpdateKind",
+    "assert_credential",
+    "dict_to_request",
+    "dict_to_result",
+    "hash_targets",
+    "make_idempotency_key",
+    "prepare",
+    "request_to_dict",
+    "result_to_dict",
+    "target_set_hash",
+    "validate_request",
+]
