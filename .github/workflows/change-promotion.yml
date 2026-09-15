@@ -19,6 +19,11 @@ on:
         description: Path to the committed or downloaded change-record JSON
         required: true
         type: string
+      validation_result_path:
+        description: Path to ValidationResult JSON. Required for canary and production.
+        required: false
+        type: string
+        default: ""
 
 # No pull_request trigger: untrusted PR code must not see production environment secrets.
 permissions:
@@ -49,6 +54,18 @@ jobs:
           FINDUPDATES_RECORD_PATH: ${{ github.event.inputs.record_path }}
           FINDUPDATES_TARGET_ENVIRONMENT: ${{ github.event.inputs.target_environment }}
         run: python -m findupdates.changerecords.workflow "$FINDUPDATES_RECORD_PATH" "$FINDUPDATES_TARGET_ENVIRONMENT"
+      - name: Enforce validation evidence
+        if: github.event.inputs.target_environment != 'lab'
+        env:
+          PYTHONPATH: src
+          FINDUPDATES_VALIDATION_RESULT: ${{ github.event.inputs.validation_result_path }}
+          FINDUPDATES_TARGET_ENVIRONMENT: ${{ github.event.inputs.target_environment }}
+        run: |
+          if [ -z "$FINDUPDATES_VALIDATION_RESULT" ]; then
+            echo "canary/production require a ValidationResult file" >&2
+            exit 1
+          fi
+          python -m findupdates.validation.workflow "$FINDUPDATES_VALIDATION_RESULT" "$FINDUPDATES_TARGET_ENVIRONMENT"
 
   lab:
     needs: gate

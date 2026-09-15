@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "imaging-workstation",
+  "profile_version": "1.0",
+  "device_model": "ImagingStation-X200",
+  "baseline_id": "lab-imaging-24h2",
+  "cases": [
+    {
+      "case_id": "boot_reboot",
+      "domain": "boot",
+      "title": "Device returns to a bootable OS after the update",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 120
+    },
+    {
+      "case_id": "os_health",
+      "domain": "os_health",
+      "title": "OS health and update installation status",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 60
+    },
+    {
+      "case_id": "driver_firmware_init",
+      "domain": "driver_firmware",
+      "title": "Driver and firmware initialize without fatal errors",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 60
+    },
+    {
+      "case_id": "medical_app_smoke",
+      "domain": "medical_application",
+      "title": "Medical application starts and passes non-clinical smoke checks",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": true,
+      "timeout_seconds": 90
+    },
+    {
+      "case_id": "connectivity",
+      "domain": "connectivity",
+      "title": "Required lab services and peripherals are reachable",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 30
+    },
+    {
+      "case_id": "resources",
+      "domain": "resources",
+      "title": "CPU, memory and storage stay within sanity bounds",
+      "mandatory": false,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 30
+    },
+    {
+      "case_id": "critical_service",
+      "domain": "critical_service",
+      "title": "Critical workstation services are running",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 30
+    },
+    {
+      "case_id": "device_io",
+      "domain": "device_io",
+      "title": "Representative non-patient device I/O",
+      "mandatory": false,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 30
+    },
+    {
+      "case_id": "rollback",
+      "domain": "rollback",
+      "title": "Uninstall or rollback path is available",
+      "mandatory": true,
+      "automatable": true,
+      "clinical": false,
+      "timeout_seconds": 60
+    },
+    {
+      "case_id": "known_issues",
+      "domain": "known_issue",
+      "title": "Vendor known-issue list reviewed against this baseline",
+      "mandatory": true,
+      "automatable": false,
+      "clinical": true,
+      "timeout_seconds": 300
+    }
+  ]
+}

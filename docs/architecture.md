@@ -47,6 +47,8 @@ GitHub Issues store one change record per advisory and deployment group. Promoti
 
 Severity-aware notifications fan out from that change record. Unchanged rescans are suppressed. Material risk, KEV, device-count, policy or operational-failure changes emit a new event. Notifications cannot alter applicability, score or policy.
 
+Lab validation is a version-controlled profile per device model. Required FAIL, BLOCKED or INCONCLUSIVE outcomes block canary and production. Installer success is not a clinical-function pass.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification
