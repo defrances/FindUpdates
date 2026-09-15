@@ -69,8 +69,14 @@ def list_of(value: object) -> list[Any]:
     return [value]
 
 
+_MIN_USABLE_YEAR = 2000
+
+
 def parse_datetime(value: object) -> datetime | None:
-    """Parse ISO-8601 timestamps; naive values are treated as UTC."""
+    """Parse ISO-8601 timestamps; naive values are treated as UTC.
+
+    Sentinels before year 2000 (MSRC ``0001-01-01``) are missing dates, not events.
+    """
     text = text_of(value) if not isinstance(value, datetime) else None
     if isinstance(value, datetime):
         parsed = value
@@ -82,6 +88,8 @@ def parse_datetime(value: object) -> datetime | None:
             parsed = datetime.fromisoformat(normalized)
         except ValueError:
             return None
+    if parsed.year < _MIN_USABLE_YEAR:
+        return None
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)

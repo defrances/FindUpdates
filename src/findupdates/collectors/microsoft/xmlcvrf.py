@@ -102,10 +102,25 @@ def _vulnerability(element: ET.Element) -> dict[str, Any]:
         "ReleaseDate": _direct_text(element, "ReleaseDate"),
         "RevisionDate": _direct_text(element, "RevisionDate"),
         "CurrentReleaseDate": _direct_text(element, "CurrentReleaseDate"),
+        "RevisionHistory": _revision_history(element),
         "Notes": notes,
         "ProductStatuses": statuses,
         "Remediations": remediations,
     }
+
+
+def _revision_history(element: ET.Element) -> list[dict[str, Any]]:
+    history: list[dict[str, Any]] = []
+    for block in _children(element, "RevisionHistory"):
+        for revision in _children(block, "Revision"):
+            history.append(
+                {
+                    "Number": _direct_text(revision, "Number"),
+                    "Date": _direct_text(revision, "Date"),
+                    "Description": _direct_text(revision, "Description"),
+                }
+            )
+    return history
 
 
 def _product_map(root: ET.Element) -> dict[str, str]:

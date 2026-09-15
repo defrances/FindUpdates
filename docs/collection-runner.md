@@ -26,12 +26,14 @@ Environment:
 Issue #77 defaults the lookback to **45 days** so one iteration covers a
 Patch Tuesday plus the prior month. MSRC still fetches monthly CVRF documents
 in at least that same 45-day document window. Per-CVE `ReleaseDate` /
-`RevisionDate` drive advisory emission. Document-level dates alone are catalog
-stamps: CVE years older than the window year are reprints and are not treated
-as in-window updates. Sentinel dates before year 2000 are not treated as
-in-window updates. An empty window is not `not_affected`. GitHub Actions packs
-detect output into one `.tgz` so `upload-artifact` does not walk tens of
-thousands of JSON files.
+`RevisionDate` / `RevisionHistory` drive advisory emission. Live MSRC often
+sends `ReleaseDate=0001-01-01` with `ReleaseDateSpecified=false`; that
+sentinel is missing, not an event (#79). Document-level dates alone are
+catalog stamps: CVE years older than the window year are reprints and are
+not treated as in-window updates. Sentinel dates before year 2000 are not
+treated as in-window updates. An empty window is not `not_affected`. GitHub
+Actions packs detect output into one `.tgz` so `upload-artifact` does not
+walk tens of thousands of JSON files.
 
 ## Fail-closed behavior
 

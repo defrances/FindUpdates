@@ -121,8 +121,7 @@ def _parse_vulnerability(
     cvss = _cvss(vulnerability)
     exploited, exploitability = _exploitation(vulnerability)
     references = _references(vulnerability, cve)
-    own_published = parse_datetime(pick(vulnerability, "ReleaseDate"))
-    own_revised = parse_datetime(pick(vulnerability, "RevisionDate", "CurrentReleaseDate"))
+    own_published, own_revised = _vulnerability_dates(vulnerability)
     provenance = Provenance(
         source_url=source_url,
         raw_sha256=sha256_json(dict(vulnerability)),
@@ -161,6 +160,52 @@ def _parse_vulnerability(
         ),
         normalization_confidence=Confidence.MEDIUM,
     )
+
+
+def _vulnerability_dates(
+    vulnerability: Mapping[str, Any],
+) -> tuple[datetime | None, datetime | None]:
+    """Own CVE dates only. Sentinel ReleaseDate and Specified=false are missing."""
+    published = _field_datetime(vulnerability, "ReleaseDate")
+    revised = _field_datetime(vulnerability, "RevisionDate") or _field_datetime(
+        vulnerability, "CurrentReleaseDate"
+    )
+    history = _revision_history_dates(vulnerability)
+    if published is None and history:
+        published = min(history)
+    if revised is None and history:
+        revised = max(history)
+    return published, revised
+
+
+def _field_datetime(node: Mapping[str, Any], field: str) -> datetime | None:
+    if not _field_specified(node, field):
+        return None
+    return parse_datetime(pick(node, field))
+
+
+def _field_specified(node: Mapping[str, Any], field: str) -> bool:
+    flag = pick(node, f"{field}Specified")
+    if flag is None:
+        return True
+    if isinstance(flag, bool):
+        return flag
+    text = text_of(flag)
+    if text is None:
+        return True
+    return text.casefold() not in {"false", "0", "no"}
+
+
+def _revision_history_dates(vulnerability: Mapping[str, Any]) -> list[datetime]:
+    dates: list[datetime] = []
+    for item in list_of(pick(vulnerability, "RevisionHistory")):
+        entry = mapping(item)
+        if entry is None:
+            continue
+        parsed = parse_datetime(pick(entry, "Date"))
+        if parsed is not None:
+            dates.append(parsed)
+    return dates
 
 
 def _product_index(tree: Mapping[str, Any] | None) -> dict[str, tuple[str, str | None]]:

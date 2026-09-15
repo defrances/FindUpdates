@@ -77,8 +77,10 @@ markdown.
 
 Issue #77 limits live detect collection to the last 45 days of dated vendor
 updates. Issue #75 does not copy the monthly CVRF revision onto every CVE;
-older CVE years with only catalog stamps are skipped. Detect artifacts are
-packed into one archive. An empty window is not treated as not_affected.
+older CVE years with only catalog stamps are skipped. Issue #79 ignores
+MSRC sentinel `ReleaseDate` values and uses `RevisionHistory` when that is
+the only usable per-CVE date. Detect artifacts are packed into one archive.
+An empty window is not treated as not_affected.
 
 ## Fail-closed behavior
 
