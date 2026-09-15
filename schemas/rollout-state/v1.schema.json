@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/rollout-state/v1.schema.json",
+  "title": "RolloutState",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "rollout_id",
+    "plan_id",
+    "status",
+    "current_stage",
+    "stages",
+    "promotions",
+    "updated_at"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "rollout_id": {"$ref": "#/$defs/nonEmptyString"},
+    "plan_id": {"$ref": "#/$defs/nonEmptyString"},
+    "status": {
+      "type": "string",
+      "enum": ["planned", "in_progress", "paused", "succeeded", "failed", "cancelled"]
+    },
+    "current_stage": {
+      "type": "string",
+      "enum": ["lab", "canary", "ring-1", "ring-2", "production"]
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "status",
+          "membership_hash",
+          "deployment_id",
+          "actor",
+          "reason",
+          "started_at",
+          "observation_ends_at",
+          "health"
+        ],
+        "properties": {
+          "name": {"$ref": "#/$defs/nonEmptyString"},
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "observing", "passed", "failed", "paused", "skipped"]
+          },
+          "membership_hash": {"type": "string"},
+          "deployment_id": {"type": ["string", "null"]},
+          "actor": {"type": ["string", "null"]},
+          "reason": {"type": ["string", "null"]},
+          "started_at": {"type": ["string", "null"], "format": "date-time"},
+          "observation_ends_at": {"type": ["string", "null"], "format": "date-time"},
+          "health": {
+            "anyOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "observed",
+                  "success_count",
+                  "failure_count",
+                  "crash_count",
+                  "connectivity_loss",
+                  "validation_regressions",
+                  "inconclusive_critical"
+                ],
+                "properties": {
+                  "observed": {"type": "boolean"},
+                  "success_count": {"type": "integer", "minimum": 0},
+                  "failure_count": {"type": "integer", "minimum": 0},
+                  "crash_count": {"type": "integer", "minimum": 0},
+                  "connectivity_loss": {"type": "integer", "minimum": 0},
+                  "validation_regressions": {"type": "integer", "minimum": 0},
+                  "inconclusive_critical": {"type": "integer", "minimum": 0}
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "promotions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actor", "reason", "from_stage", "to_stage", "membership_hash", "at"],
+        "properties": {
+          "actor": {"$ref": "#/$defs/nonEmptyString"},
+          "reason": {"$ref": "#/$defs/nonEmptyString"},
+          "from_stage": {"$ref": "#/$defs/nonEmptyString"},
+          "to_stage": {"$ref": "#/$defs/nonEmptyString"},
+          "membership_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "at": {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "status": "draft",
+  "selection": {
+    "canary_percent": 10,
+    "ring_1_percent": 25
+  },
+  "stages": {
+    "lab": {
+      "environment": "lab",
+      "observation_window_minutes": 0,
+      "max_failure_rate": 0,
+      "max_crash_count": 0,
+      "max_connectivity_loss": 0,
+      "max_validation_regressions": 0,
+      "requires_approval": false,
+      "maintenance_required": false
+    },
+    "canary": {
+      "environment": "canary",
+      "observation_window_minutes": 60,
+      "max_failure_rate": 0.05,
+      "max_crash_count": 0,
+      "max_connectivity_loss": 0,
+      "max_validation_regressions": 0,
+      "requires_approval": false,
+      "maintenance_required": true
+    },
+    "ring-1": {
+      "environment": "canary",
+      "observation_window_minutes": 120,
+      "max_failure_rate": 0.02,
+      "max_crash_count": 0,
+      "max_connectivity_loss": 0,
+      "max_validation_regressions": 0,
+      "requires_approval": false,
+      "maintenance_required": true
+    },
+    "ring-2": {
+      "environment": "production",
+      "observation_window_minutes": 180,
+      "max_failure_rate": 0.01,
+      "max_crash_count": 0,
+      "max_connectivity_loss": 0,
+      "max_validation_regressions": 0,
+      "requires_approval": true,
+      "maintenance_required": true
+    },
+    "production": {
+      "environment": "production",
+      "observation_window_minutes": 240,
+      "max_failure_rate": 0.01,
+      "max_crash_count": 0,
+      "max_connectivity_loss": 0,
+      "max_validation_regressions": 0,
+      "requires_approval": true,
+      "maintenance_required": true
+    }
+  }
+}

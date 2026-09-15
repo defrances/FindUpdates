@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/rollout-plan/v1.schema.json",
+  "title": "RolloutPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "change_idempotency_key",
+    "policy_result",
+    "package_id",
+    "package_sha256",
+    "stages",
+    "membership_hash",
+    "emergency",
+    "created_at"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "stageName": {
+      "type": "string",
+      "enum": ["lab", "canary", "ring-1", "ring-2", "production"]
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "plan_id": {"$ref": "#/$defs/nonEmptyString"},
+    "change_idempotency_key": {"$ref": "#/$defs/nonEmptyString"},
+    "policy_result": {
+      "type": "string",
+      "enum": ["ALLOW_ANALYSIS", "REQUIRE_VALIDATION", "REQUIRE_APPROVAL", "HOLD", "BLOCK"]
+    },
+    "package_id": {"$ref": "#/$defs/nonEmptyString"},
+    "package_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "stages": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "environment",
+          "member_device_ids",
+          "membership_hash",
+          "observation_window_minutes",
+          "max_failure_rate",
+          "max_crash_count",
+          "max_connectivity_loss",
+          "max_validation_regressions",
+          "requires_approval",
+          "maintenance_required"
+        ],
+        "properties": {
+          "name": {"$ref": "#/$defs/stageName"},
+          "environment": {"type": "string", "enum": ["lab", "canary", "production"]},
+          "member_device_ids": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/nonEmptyString"}
+          },
+          "membership_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "observation_window_minutes": {"type": "integer", "minimum": 0},
+          "max_failure_rate": {"type": "number", "minimum": 0, "maximum": 1},
+          "max_crash_count": {"type": "integer", "minimum": 0},
+          "max_connectivity_loss": {"type": "integer", "minimum": 0},
+          "max_validation_regressions": {"type": "integer", "minimum": 0},
+          "requires_approval": {"type": "boolean"},
+          "maintenance_required": {"type": "boolean"}
+        }
+      }
+    },
+    "membership_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "emergency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorized", "actor", "reason"],
+      "properties": {
+        "authorized": {"type": "boolean"},
+        "actor": {"type": "string"},
+        "reason": {"type": "string"}
+      }
+    },
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

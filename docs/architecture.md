@@ -51,6 +51,8 @@ Lab validation is a version-controlled profile per device model. Required FAIL, 
 
 Deployment adapters execute only already-authorized requests. They verify the approved target-set hash and package identity, require short-lived OIDC credentials that are never stored on the request, and refuse unqualified Intel/OEM firmware. Unsupported rollback is an error, not a successful uninstall. Microsoft OS/driver channels are a separate capability set from OEM firmware agents.
 
+Staged rollout proceeds lab → canary → ring-1 → ring-2 → production. Ring membership is hashed at plan time. Promotion requires observed health, a completed observation window and stage thresholds; INCONCLUSIVE critical signals pause. Clinically critical devices skip early rings. Maintenance windows are timezone-aware. Partial adapter failure does not promote.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification
