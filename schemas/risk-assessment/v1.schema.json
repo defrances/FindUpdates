@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/risk-assessment/v1.schema.json",
+  "title": "RiskAssessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "assessment_id", "advisory_id", "device_id", "policy_version", "score", "severity", "policy_result", "reason_codes"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "assessment_id": {"type": "string", "minLength": 1},
+    "advisory_id": {"type": "string", "minLength": 1},
+    "device_id": {"type": "string", "minLength": 1},
+    "policy_version": {"type": "string", "minLength": 1},
+    "score": {"type": "number", "minimum": 0, "maximum": 100},
+    "severity": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "EMERGENCY"]},
+    "policy_result": {"type": "string", "enum": ["ALLOW_ANALYSIS", "REQUIRE_VALIDATION", "REQUIRE_APPROVAL", "HOLD", "BLOCK"]},
+    "reason_codes": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+  }
+}

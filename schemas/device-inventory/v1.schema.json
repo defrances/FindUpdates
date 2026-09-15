@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/device-inventory/v1.schema.json",
+  "title": "DeviceInventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "device_id", "manufacturer", "model", "clinical_criticality", "inventory_timestamp", "source_confidence"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "device_id": {"type": "string", "minLength": 1, "description": "Stable non-PHI device identifier"},
+    "manufacturer": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "clinical_criticality": {"type": "string", "enum": ["low", "medium", "high", "critical", "unknown"]},
+    "os": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "product": {"type": "string"},
+        "version": {"type": "string"},
+        "build": {"type": "string"},
+        "architecture": {"type": "string"}
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "name", "version", "verification_state"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["cpu", "chipset", "bios", "firmware", "driver", "software", "other"]},
+          "name": {"type": "string", "minLength": 1},
+          "version": {"type": ["string", "null"]},
+          "verification_state": {"type": "string", "enum": ["verified", "declared", "unverified", "unknown"]}
+        }
+      }
+    },
+    "inventory_timestamp": {"type": "string", "format": "date-time"},
+    "source_confidence": {"type": "string", "enum": ["verified", "declared", "unverified", "unknown"]}
+  }
+}

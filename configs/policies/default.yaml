@@ -1,0 +1,15 @@
+version: "0.1-draft"
+status: draft
+
+# Placeholder weights for Issue #19. They are not approved for production use.
+risk_bands:
+  low: [0, 29]
+  medium: [30, 49]
+  high: [50, 69]
+  critical: [70, 84]
+  emergency: [85, 100]
+
+hard_gates:
+  unknown_applicability: BLOCK
+  stale_inventory: HOLD
+  unknown_oem_firmware_qualification: HOLD

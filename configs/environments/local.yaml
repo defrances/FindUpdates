@@ -1,0 +1,4 @@
+environment: local
+allow_real_deployment: false
+notification_mode: log
+storage_mode: ephemeral
