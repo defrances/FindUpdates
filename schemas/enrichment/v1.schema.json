@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/enrichment/v1.schema.json",
+  "title": "CveEnrichment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "cve_id",
+    "nvd_found",
+    "nvd_cvss",
+    "nvd_cwes",
+    "nvd_cpes",
+    "nvd_last_modified",
+    "nvd_retrieved_at",
+    "nvd_raw_sha256",
+    "nvd_stale",
+    "kev_listed",
+    "kev_date_added",
+    "kev_due_date",
+    "kev_required_action",
+    "kev_ransomware_use",
+    "kev_catalog_version",
+    "kev_retrieved_at",
+    "kev_raw_sha256",
+    "kev_stale"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "cve_id": {"type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"},
+    "nvd_found": {"type": "string", "enum": ["true", "false", "unknown"]},
+    "nvd_cvss": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "vector", "base_score", "source"],
+        "properties": {
+          "version": {"type": "string", "enum": ["2.0", "3.0", "3.1", "4.0", "unknown"]},
+          "vector": {"type": ["string", "null"], "minLength": 1},
+          "base_score": {"type": ["number", "null"], "minimum": 0, "maximum": 10},
+          "source": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "nvd_cwes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "nvd_cpes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "nvd_last_modified": {"type": ["string", "null"], "format": "date-time"},
+    "nvd_retrieved_at": {"type": ["string", "null"], "format": "date-time"},
+    "nvd_raw_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "nvd_stale": {"type": "boolean"},
+    "kev_listed": {"type": "string", "enum": ["true", "false", "unknown"]},
+    "kev_date_added": {"type": ["string", "null"]},
+    "kev_due_date": {"type": ["string", "null"]},
+    "kev_required_action": {"type": ["string", "null"], "minLength": 1},
+    "kev_ransomware_use": {"type": "string", "enum": ["true", "false", "unknown"]},
+    "kev_catalog_version": {"type": ["string", "null"], "minLength": 1},
+    "kev_retrieved_at": {"type": ["string", "null"], "format": "date-time"},
+    "kev_raw_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "kev_stale": {"type": "boolean"}
+  }
+}

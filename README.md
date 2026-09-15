@@ -19,6 +19,7 @@ The target pipeline discovers Microsoft and Intel advisories, determines whether
 src/findupdates/          Application packages
   collectors/             Vendor/source ingestion
   normalization/          Canonical advisory normalization
+  enrichment/             NVD CVSS and CISA KEV context
   inventory/              Device inventory and SBOM handling
   applicability/          Deterministic device/update matching
   risk/                   Risk scoring and policy evaluation
@@ -53,7 +54,7 @@ Runtime configuration is supplied through environment variables. Copy `.env.exam
 
 ## Current roadmap
 
-The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Intel CSAF ingestion is [Issue #13](https://github.com/defrances/FindUpdates/issues/13). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9).
+The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Intel CSAF ingestion is [Issue #13](https://github.com/defrances/FindUpdates/issues/13). NVD and CISA KEV enrichment is [Issue #15](https://github.com/defrances/FindUpdates/issues/15). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9).
 
 ## Status
 

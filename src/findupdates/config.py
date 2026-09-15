@@ -23,6 +23,11 @@ class Settings:
     msrc_lookback_days: int = 45
     intel_csaf_index_url: str | None = None
     intel_lookback_days: int = 120
+    nvd_base_url: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    kev_url: str = (
+        "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    )
+    enrichment_cache_max_age_hours: int = 24
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -41,4 +46,15 @@ class Settings:
             msrc_lookback_days=int(os.getenv("FINDUPDATES_MSRC_LOOKBACK_DAYS", "45")),
             intel_csaf_index_url=os.getenv("FINDUPDATES_INTEL_CSAF_INDEX_URL") or None,
             intel_lookback_days=int(os.getenv("FINDUPDATES_INTEL_LOOKBACK_DAYS", "120")),
+            nvd_base_url=os.getenv(
+                "FINDUPDATES_NVD_BASE_URL",
+                "https://services.nvd.nist.gov/rest/json/cves/2.0",
+            ),
+            kev_url=os.getenv(
+                "FINDUPDATES_KEV_URL",
+                "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+            ),
+            enrichment_cache_max_age_hours=int(
+                os.getenv("FINDUPDATES_ENRICHMENT_CACHE_MAX_AGE_HOURS", "24")
+            ),
         )
