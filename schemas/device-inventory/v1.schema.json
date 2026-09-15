@@ -4,38 +4,170 @@
   "title": "DeviceInventory",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "device_id", "manufacturer", "model", "clinical_criticality", "inventory_timestamp", "source_confidence"],
-  "properties": {
-    "schema_version": {"const": "1.0"},
-    "device_id": {"type": "string", "minLength": 1, "description": "Stable non-PHI device identifier"},
-    "manufacturer": {"type": "string", "minLength": 1},
-    "model": {"type": "string", "minLength": 1},
-    "clinical_criticality": {"type": "string", "enum": ["low", "medium", "high", "critical", "unknown"]},
-    "os": {
-      "type": ["object", "null"],
+  "required": [
+    "schema_version",
+    "device_id",
+    "manufacturer",
+    "model",
+    "device_role",
+    "clinical_criticality",
+    "network_exposure",
+    "deployment_group",
+    "maintenance_window",
+    "update_management",
+    "os",
+    "hardware_components",
+    "software_components",
+    "sbom_references",
+    "inventory_timestamp",
+    "inventory_source",
+    "source_confidence",
+    "freshness_state",
+    "freshness_evaluated_at",
+    "freshness_max_age_hours"
+  ],
+  "$defs": {
+    "verificationState": {
+      "type": "string",
+      "enum": ["verified", "declared", "unverified", "unknown"]
+    },
+    "normalizedIdentifiers": {
+      "type": "object",
       "additionalProperties": false,
       "properties": {
-        "product": {"type": "string"},
-        "version": {"type": "string"},
-        "build": {"type": "string"},
-        "architecture": {"type": "string"}
+        "vendor_product_id": {"type": ["string", "null"], "minLength": 1},
+        "cpe": {"type": ["string", "null"], "minLength": 1},
+        "purl": {"type": ["string", "null"], "minLength": 1}
       }
     },
-    "components": {
+    "hardwareComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "vendor", "name", "version", "verification_state", "identifiers"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["cpu", "chipset", "bios", "firmware", "other"]},
+        "vendor": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"], "minLength": 1},
+        "verification_state": {"$ref": "#/$defs/verificationState"},
+        "identifiers": {"$ref": "#/$defs/normalizedIdentifiers"}
+      }
+    },
+    "softwareComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "vendor", "name", "version", "verification_state", "identifiers"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["driver", "medical_application", "system_software", "other"]},
+        "vendor": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"], "minLength": 1},
+        "verification_state": {"$ref": "#/$defs/verificationState"},
+        "identifiers": {"$ref": "#/$defs/normalizedIdentifiers"}
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable technical device identifier. Must not contain patient identifiers or PHI."
+    },
+    "manufacturer": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "hardware_revision": {"type": ["string", "null"], "minLength": 1},
+    "device_role": {"type": "string", "minLength": 1},
+    "clinical_criticality": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical", "unknown"]
+    },
+    "network_exposure": {
+      "type": "string",
+      "enum": ["isolated", "restricted_lan", "enterprise_lan", "internet_exposed", "unknown"]
+    },
+    "site_group": {"type": ["string", "null"], "minLength": 1},
+    "deployment_group": {"type": "string", "minLength": 1},
+    "validation_baseline": {"type": ["string", "null"], "minLength": 1},
+    "maintenance_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timezone", "days_of_week", "start_local", "duration_minutes"],
+      "properties": {
+        "timezone": {"type": "string", "minLength": 1},
+        "days_of_week": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]}
+        },
+        "start_local": {"type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},
+        "duration_minutes": {"type": "integer", "minimum": 1, "maximum": 1440}
+      }
+    },
+    "update_management": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism", "channel"],
+      "properties": {
+        "mechanism": {
+          "type": "string",
+          "enum": ["intune", "windows_autopatch", "mdm", "custom_agent", "manual", "unknown"]
+        },
+        "channel": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product",
+        "edition",
+        "version",
+        "build",
+        "architecture",
+        "vendor_product_id",
+        "cpe",
+        "verification_state"
+      ],
+      "properties": {
+        "product": {"type": "string", "minLength": 1},
+        "edition": {"type": ["string", "null"], "minLength": 1},
+        "version": {"type": ["string", "null"], "minLength": 1},
+        "build": {"type": ["string", "null"], "minLength": 1},
+        "architecture": {"type": "string", "enum": ["x64", "x86", "arm64", "other", "unknown"]},
+        "vendor_product_id": {"type": ["string", "null"], "minLength": 1},
+        "cpe": {"type": ["string", "null"], "minLength": 1},
+        "verification_state": {"$ref": "#/$defs/verificationState"}
+      }
+    },
+    "hardware_components": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/hardwareComponent"}
+    },
+    "software_components": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/softwareComponent"}
+    },
+    "sbom_references": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["kind", "name", "version", "verification_state"],
+        "required": ["format", "document_ref", "document_version", "sha256"],
         "properties": {
-          "kind": {"type": "string", "enum": ["cpu", "chipset", "bios", "firmware", "driver", "software", "other"]},
-          "name": {"type": "string", "minLength": 1},
-          "version": {"type": ["string", "null"]},
-          "verification_state": {"type": "string", "enum": ["verified", "declared", "unverified", "unknown"]}
+          "format": {"type": "string", "enum": ["spdx", "cyclonedx", "unknown"]},
+          "document_ref": {"type": "string", "minLength": 1},
+          "document_version": {"type": ["string", "null"], "minLength": 1},
+          "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
         }
       }
     },
     "inventory_timestamp": {"type": "string", "format": "date-time"},
-    "source_confidence": {"type": "string", "enum": ["verified", "declared", "unverified", "unknown"]}
+    "inventory_source": {"type": "string", "minLength": 1},
+    "source_confidence": {"$ref": "#/$defs/verificationState"},
+    "freshness_state": {"type": "string", "enum": ["fresh", "stale", "unknown"]},
+    "freshness_evaluated_at": {"type": "string", "format": "date-time"},
+    "freshness_max_age_hours": {"type": "integer", "minimum": 1, "maximum": 8760}
   }
 }
