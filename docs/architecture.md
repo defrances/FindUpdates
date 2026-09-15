@@ -1,5 +1,8 @@
 # Architecture baseline
 
+Illustrated operator-facing pipeline diagrams live in [README.md](../README.md).
+This document is the trust-model and fail-closed baseline those diagrams follow.
+
 ## Pipeline boundaries
 
 ```text

@@ -1,43 +1,155 @@
 # FindUpdates
 
-FindUpdates is a safety-conscious update intelligence and orchestration project for medical-device environments.
+FindUpdates is a safety-conscious update intelligence and orchestration pipeline
+for medical-device environments. It discovers Microsoft and Intel advisories,
+matches them against managed-device inventory, computes deterministic
+risk and policy, produces auditable GitHub change records, and (on the MVP
+path) validates, deploys through mock adapters, and records evidence.
 
-The target pipeline discovers Microsoft and Intel advisories, determines whether they apply to managed devices, calculates deterministic risk/policy outcomes, produces auditable change records, validates updates, and hands approved changes to controlled deployment backends.
+**This repository is not approved for production medical-device deployment.**
+Patient identifiers and PHI must never enter fixtures, logs, model prompts, or
+audit artifacts. Vendor advisory text is untrusted input.
 
-## Safety model
+GitHub is the control plane for code, change records, approvals, and evidence.
+Device updates execute only through approved deployment adapters. Agentic AI
+may summarize and explain evidence; it is never authoritative for applicability,
+severity, approval, or production deployment ([ADR-0003](docs/adr/0003-non-authoritative-ai.md)).
 
-- Agentic AI may summarize, correlate and explain evidence, but it is not authoritative for applicability, severity, approval or production deployment.
-- Deterministic policy gates are the source of truth for machine-enforceable decisions.
-- Unknown or stale applicability data fails safe and must not be interpreted as `not_affected`.
-- GitHub is the control plane for code, change records, approvals and evidence; device updates are executed only through approved deployment adapters.
-- Production rollout remains gated by a deployment kill switch, least-privilege workflows, freshness alerts and crash recovery that does not reinstall. This repository is not approved for production deployment.
-- Patient identifiers and PHI must never enter repository fixtures, logs, model prompts or audit artifacts.
+---
 
-## Repository layout
+## How the pipeline works
 
-```text
-src/findupdates/          Application packages
-  collectors/             Vendor/source ingestion and polling runner
-  normalization/          Canonical advisory normalization
-  enrichment/             NVD CVSS and CISA KEV context
-  inventory/              Device inventory and SBOM handling
-  applicability/          Deterministic device/update matching
-  risk/                   Risk scoring and policy evaluation
-  agents/                 Bounded AI analysis layer
-  notifications/          Severity-aware notification adapters
-  validation/             Lab validation plans and simulated targets
-  deployment/             Approved deployment backend adapters
-  rollout/                Staged canary/ring promotion
-  monitoring/             Post-deploy health, pause and gated rollback
-  audit/                  Evidence and audit trail
-  ops/                    Kill switch, metrics, freshness alerts, recovery
-  mvp/                    Fixture-driven end-to-end demo runner
-configs/                  Version-controlled non-secret configuration
-schemas/                  Versioned JSON Schemas
-tests/                    Unit, integration and fixtures
-docs/                     Architecture and ADRs
-.github/                   CI, templates and repository policy
+The pipeline is a sequence of bounded stages. Intelligence stages
+(collect → assess → notify) run locally and on GitHub Actions. Execution
+stages (validation → deploy → rollout → monitor) run in the MVP demo with
+simulated backends; they are not wired to live Intune or OEM agents.
+
+```mermaid
+flowchart TB
+  subgraph ingest ["1. Ingest"]
+    MSRC["MSRC CVRF"]
+    Intel["Intel CSAF"]
+    Collectors["Collectors + checkpoints"]
+    Normalize["Normalize to UpdateAdvisory"]
+    MSRC --> Collectors
+    Intel --> Collectors
+    Collectors --> Normalize
+  end
+
+  subgraph context ["2. Context"]
+    Enrich["NVD CVSS + CISA KEV"]
+    Inventory["Device inventory / SBOM"]
+    Apply["Applicability matching"]
+    Normalize --> Enrich
+    Enrich --> Apply
+    Inventory --> Apply
+  end
+
+  subgraph decide ["3. Decide"]
+    Risk["Deterministic risk + policy"]
+    AI["Bounded AI analysis"]
+    Apply --> Risk
+    Risk --> AI
+    AI -.->|"cannot rewrite policy"| Risk
+  end
+
+  subgraph control ["4. GitHub control plane"]
+    CR["Change records"]
+    Notify["Severity-aware notifications"]
+    Risk --> CR
+    AI --> CR
+    CR --> Notify
+  end
+
+  subgraph execute ["5. Execute — MVP simulated path"]
+    Val["Lab validation"]
+    Deploy["Deployment adapter"]
+    Roll["Staged rollout"]
+    Mon["Post-deploy monitoring"]
+    Audit["Append-only audit evidence"]
+    CR --> Val
+    Val --> Deploy
+    Deploy --> Roll
+    Roll --> Mon
+    Mon --> Audit
+  end
+
+  Ops["Ops: kill switch, freshness alerts, recovery"]
+  Audit --> Ops
 ```
+
+Fail-closed rules sit beside every stage. Unknown must never become
+`not_affected` or an empty “no updates” catalog.
+
+```mermaid
+flowchart LR
+  Unknown["Unknown, stale, or weak identity"] --> Block["BLOCK or HOLD"]
+  KEV["CISA KEV listed"] --> Raise["Raise score and approval burden"]
+  KEV -.->|"does not authorize"| Prod["Production deploy"]
+  AIOut["AI summary / correlation"] -.->|"non-authoritative"| Policy["policy_result"]
+  Hard["HOLD / BLOCK"] --> Stay["Cannot be rewritten by AI or workflow dispatch"]
+```
+
+### Stage notes
+
+| Stage | What happens | Fail-closed behavior |
+| --- | --- | --- |
+| Collect | Poll MSRC CVRF and Intel CSAF. Write advisory JSON and checkpoints. Network failure is an outage, not “no updates”. | Malformed source data is rejected. Intel CSAF URLs are fetched only when they share the configured index host. |
+| Normalize | Map vendor payloads onto the versioned `UpdateAdvisory` schema. | Unknown reboot, exploitation, and product-status values stay unknown; they are never coerced to negatives. |
+| Enrich | Attach NVD CVSS and CISA KEV context. Prioritization only. | Absence from KEV is not proof of no exploitation. Outages keep last-known cache or stay unknown. Vendor `affected_products` are not overwritten. |
+| Inventory + applicability | Match advisories to devices with strong product identity. | Empty, stale, or weakly identified inventory cannot yield `not_affected`. Unknown applicability is `BLOCK`. |
+| Risk / policy | Versioned deterministic function of advisory, inventory, applicability, and policy. Hard gates override numeric score. | Invalid policy fails closed. Draft policy under `configs/policies/` is not production approval. |
+| Bounded AI | Explain and correlate after risk. Offline/template provider is used in GitHub Actions. | AI cannot change `policy_result`, target set, or approvals. Provider outage still emits the analysis schema. |
+| Change records | One GitHub Issue (or in-memory record) per `(advisory_id, deployment_group)`. | HOLD/BLOCK cannot be overridden by a dispatch input. Promotion never runs on pull requests. |
+| Notify | Fan-out on material risk, KEV, device-count, policy, or operational-failure changes. Unchanged rescans are suppressed. | Delivery failure is recorded; it does not abort assess or rewrite policy. Webhook URLs are read at request time, never stored on the record. |
+| Validate → deploy → rollout → monitor | Lab profile, adapter, canary/rings, health classification. Wired in the MVP demo with mock adapters. | Required FAIL / BLOCKED / INCONCLUSIVE blocks promotion. Automatic pause is allowed; automatic rollback is not. Kill switch stops new installs without stopping collection. |
+
+The detailed trust model lives in [docs/architecture.md](docs/architecture.md).
+
+---
+
+## GitHub detect path (what Actions run today)
+
+`.github/workflows/detect.yml` is the scheduled intelligence loop. It never
+deploys, never runs on pull requests, and uses the offline AI provider.
+
+```mermaid
+flowchart TD
+  Trigger["cron every 6 hours or workflow_dispatch"] --> Source{"DETECT_SOURCE"}
+  Source -->|"fixtures (default)"| Fix["Write fixture advisories + matching inventory"]
+  Source -->|"live"| Poll["Poll MSRC and Intel into output/advisories"]
+  Fix --> Detect["python -m findupdates.pipeline detect"]
+  Poll --> Detect
+  Detect --> Assess["assess: risk → bounded AI → dry-run upsert → notify"]
+  Assess --> Report["report.md"]
+  Report --> Summary["GitHub Actions Job Summary"]
+  Report --> Artifacts["upload-artifact findupdates-detect"]
+  Detect -.->|"never"| NoDeploy["Intune / OEM / production install"]
+```
+
+Companion workflows:
+
+- `collect.yml` — dry-run collector only; not a pull-request check.
+- `change-promotion.yml` — promotion from a stored change record; reads
+  `policy_result` from that record; not triggered by pull requests.
+
+---
+
+## What is live vs simulated
+
+| Capability | Status |
+| --- | --- |
+| Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` may poll live only on schedule or `workflow_dispatch`. |
+| NVD / CISA KEV enrichment | Implemented. Optional during detect (`--enrich`). |
+| Deterministic applicability, risk, policy | Implemented. |
+| Bounded AI analysis | Implemented. Actions use the offline/template provider. |
+| Change-record upsert | Memory store for CI/MVP. `GitHubChangeStore` for live Issues (`--store github`). Detect always dry-runs upsert. |
+| Notifications | In-memory GitHub comment formatter. Optional webhook from `FINDUPDATES_NOTIFICATION_WEBHOOK_URL`. Detect publishes a Job Summary. No live Issue-comment POST from assess/detect. |
+| Lab validation, deployment, rollout, monitoring, audit | Implemented against `MockDeploymentAdapter`, `SimulatedTarget`, and simulated heartbeats in the MVP demo. |
+| Live Intune / OEM firmware agents | **Out of scope.** Not implemented. |
+| Acknowledgement CLI, durable notify log, WORM archive, Environment reviewers as default | Not implemented. |
+
+---
 
 ## Development
 
@@ -51,16 +163,138 @@ python -m pip install -r requirements-dev.lock
 make check
 ```
 
-On Windows PowerShell, activate the virtual environment with `.venv\\Scripts\\Activate.ps1`.
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. Set
+`PYTHONPATH=src` (or `$env:PYTHONPATH = "src"`) before running operator CLIs.
 
-## Configuration
+Copy `.env.example` for local development. Never commit real credentials,
+tokens, webhook URLs that embed secrets, or production device dumps.
+Non-secret policy lives under `configs/` and changes through code review.
 
-Runtime configuration is supplied through environment variables. Copy `.env.example` for local development, but never commit real credentials. Configuration under `configs/` is non-secret policy/environment metadata and should be changed through code review.
+Runtime state such as checkpoints and detect output belongs under
+`.findupdates/` (gitignored).
 
-## Current roadmap
+---
 
-The engineering backlog is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5). The repository foundation is implemented under [Issue #7](https://github.com/defrances/FindUpdates/issues/7). The canonical advisory model is [Issue #3](https://github.com/defrances/FindUpdates/issues/3). Microsoft ingestion is [Issue #11](https://github.com/defrances/FindUpdates/issues/11). Intel CSAF ingestion is [Issue #13](https://github.com/defrances/FindUpdates/issues/13). NVD and CISA KEV enrichment is [Issue #15](https://github.com/defrances/FindUpdates/issues/15). Device inventory is [Issue #9](https://github.com/defrances/FindUpdates/issues/9). Applicability matching is [Issue #17](https://github.com/defrances/FindUpdates/issues/17). Deterministic risk and policy evaluation is [Issue #19](https://github.com/defrances/FindUpdates/issues/19). Bounded AI analysis is [Issue #21](https://github.com/defrances/FindUpdates/issues/21). GitHub change records and approval gates are [Issue #23](https://github.com/defrances/FindUpdates/issues/23). Severity-aware notifications are [Issue #25](https://github.com/defrances/FindUpdates/issues/25). Lab validation is [Issue #27](https://github.com/defrances/FindUpdates/issues/27). The deployment adapter boundary is [Issue #29](https://github.com/defrances/FindUpdates/issues/29). Staged canary/ring rollout is [Issue #30](https://github.com/defrances/FindUpdates/issues/30). Post-deployment monitoring is [Issue #31](https://github.com/defrances/FindUpdates/issues/31). The immutable audit trail and evidence package is [Issue #32](https://github.com/defrances/FindUpdates/issues/32). Pipeline security, observability and operational failure handling is [Issue #33](https://github.com/defrances/FindUpdates/issues/33). The MVP end-to-end acceptance demo is [Issue #34](https://github.com/defrances/FindUpdates/issues/34). Live collector polling with durable checkpoints is [Issue #52](https://github.com/defrances/FindUpdates/issues/52). The GitHub Issues change-record adapter is [Issue #54](https://github.com/defrances/FindUpdates/issues/54). Assessing collector output against inventory and upserting those records is [Issue #56](https://github.com/defrances/FindUpdates/issues/56). NVD/CISA KEV enrichment during assess is [Issue #58](https://github.com/defrances/FindUpdates/issues/58). Emitting severity-aware notifications after those upserts is [Issue #61](https://github.com/defrances/FindUpdates/issues/61). Detecting updates, attaching bounded AI analysis, and notifying from GitHub Actions is [Issue #63](https://github.com/defrances/FindUpdates/issues/63).
+## Operator commands
+
+All of these commands **never deploy**.
+
+### Collect vendor advisories
+
+```bash
+python -m findupdates.collectors --dry-run --source all
+python -m findupdates.collectors --source msrc --checkpoint-dir .findupdates/checkpoints --output-dir .findupdates/out
+```
+
+`--dry-run` exercises parsers without treating a live poll as a successful
+empty catalog when the network fails. See [docs/collection-runner.md](docs/collection-runner.md).
+
+### Assess against inventory
+
+```bash
+python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --output-dir .findupdates/changes --dry-run
+python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --skip-enrichment --skip-notify --skip-ai
+python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --store github --repository owner/repo
+```
+
+`--advisories` is collector output (`msrc/*.json`, `intel/*.json`) or a single
+advisory file. `--inventory` is one device, a `{ "devices": [...] }` catalog,
+or a JSON array. Empty catalogs fail closed.
+
+`--dry-run` writes change-record JSON when `--output-dir` is set and performs
+no GitHub HTTP. Analysis JSON lands under `--output-dir/analysis/`.
+Notification JSON lands under `--output-dir/notifications/`.
+
+See [docs/pipeline-assess.md](docs/pipeline-assess.md).
+
+### Detect, analyze, and notify
+
+```bash
+python -m findupdates.pipeline detect --source fixtures --output-dir .findupdates/detect
+python -m findupdates.pipeline detect --source live --inventory configs/device-models/example-windows-intel-device.json --output-dir .findupdates/detect
+```
+
+Fixture mode writes synthetic advisories and a matching non-PHI imaging
+workstation. Live mode requires `--inventory` and polls MSRC/Intel. Detect
+always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV.
+
+On GitHub: **Actions → Detect updates → Run workflow**. Default source is
+`fixtures`. The markdown report is appended to the Job Summary; artifacts
+are retained for 14 days.
+
+### MVP end-to-end demo
+
+The demo runs the full lifecycle on synthetic Microsoft and Intel fixtures
+plus a non-PHI imaging workstation. Mock adapters stand in for production
+backends. It is an acceptance test, not a production authorization.
+
+```bash
+python -m unittest tests.integration.test_mvp -v
+```
+
+Expected happy path: the Microsoft advisory applies, risk requires approval,
+offline AI explains without changing policy, a change record is stored,
+validation PASSes, staged rollout reaches `succeeded`, and an evidence bundle
+verifies. See [docs/mvp.md](docs/mvp.md).
+
+---
+
+## Repository layout
+
+```text
+src/findupdates/          Application packages
+  collectors/             Vendor/source ingestion and polling runner
+  normalization/          Canonical advisory normalization
+  enrichment/             NVD CVSS and CISA KEV context
+  inventory/              Device inventory and SBOM handling
+  applicability/          Deterministic device/update matching
+  risk/                   Risk scoring and policy evaluation
+  agents/                 Bounded AI analysis layer
+  notifications/          Severity-aware notification adapters
+  changerecords/          GitHub/in-memory change records and promotion
+  pipeline/               assess + detect operator CLIs
+  validation/             Lab validation plans and simulated targets
+  deployment/             Approved deployment backend adapters
+  rollout/                Staged canary/ring promotion
+  monitoring/             Post-deploy health, pause and gated rollback
+  audit/                  Evidence and audit trail
+  ops/                    Kill switch, metrics, freshness alerts, recovery
+  mvp/                    Fixture-driven end-to-end demo runner
+configs/                  Version-controlled non-secret configuration
+schemas/                  Versioned JSON Schemas
+tests/                    Unit, integration and fixtures
+docs/                     Architecture, ADRs, and stage manuals
+.github/                  CI, detect/collect/promotion workflows
+```
+
+---
+
+## Documentation
+
+| Topic | Document |
+| --- | --- |
+| Architecture and trust model | [docs/architecture.md](docs/architecture.md) |
+| Collect | [docs/collection-runner.md](docs/collection-runner.md), [docs/microsoft-ingestion.md](docs/microsoft-ingestion.md), [docs/intel-ingestion.md](docs/intel-ingestion.md) |
+| Assess / detect | [docs/pipeline-assess.md](docs/pipeline-assess.md) |
+| Advisory schema | [docs/update-advisory.md](docs/update-advisory.md), [ADR-0001](docs/adr/0001-unknown-states-in-advisory-schema.md) |
+| Inventory and applicability | [docs/inventory.md](docs/inventory.md), [docs/applicability.md](docs/applicability.md) |
+| Enrichment | [docs/enrichment.md](docs/enrichment.md) |
+| Risk and policy | [docs/risk-policy.md](docs/risk-policy.md), [ADR-0002](docs/adr/0002-deterministic-risk-policy.md) |
+| Bounded AI | [docs/agents.md](docs/agents.md), [ADR-0003](docs/adr/0003-non-authoritative-ai.md) |
+| Change records | [docs/change-records.md](docs/change-records.md), [ADR-0004](docs/adr/0004-github-control-plane.md) |
+| Notifications | [docs/notifications.md](docs/notifications.md), [ADR-0005](docs/adr/0005-severity-aware-notifications.md) |
+| Validation through ops | [docs/validation.md](docs/validation.md), [docs/deployment.md](docs/deployment.md), [docs/rollout.md](docs/rollout.md), [docs/monitoring.md](docs/monitoring.md), [docs/audit.md](docs/audit.md), [docs/operations.md](docs/operations.md) |
+| Threat model | [docs/threat-model.md](docs/threat-model.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+
+Engineering work is tracked under [EPIC #5](https://github.com/defrances/FindUpdates/issues/5).
+Work from a GitHub issue, keep safety-critical decisions deterministic and
+testable, and run `make check` before opening a pull request.
+
+---
 
 ## Status
 
-Early foundation/MVP development. **Not approved for production medical-device deployment.**
+Early foundation/MVP development. Collect, assess, detect, bounded AI, and
+GitHub Job Summary notification are implemented. Live production backends are
+not. **Not approved for production medical-device deployment.**
