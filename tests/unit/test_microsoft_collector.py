@@ -63,6 +63,29 @@ class MicrosoftCollectorTests(unittest.TestCase):
         self.assertEqual(advisory.affected_products[0].builds, ("10.0.22621.4037",))
         self.assertEqual([], list(_validator().iter_errors(advisory_to_dict(advisory))))
 
+    def test_default_lookback_keeps_thirty_day_old_advisory(self) -> None:
+        payload = json.loads((FIXTURES / "msrc-cvrf-windows.json").read_text(encoding="utf-8"))
+        payload["Vulnerability"][0]["ReleaseDate"] = "2026-08-16T12:00:00Z"
+        body = json.dumps(payload).encode("utf-8")
+        default_collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+        )
+        week_collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+            lookback=timedelta(days=7),
+        )
+        kept = default_collector.collect_documents([(MSRC_DOC, body)])
+        skipped = week_collector.collect_documents([(MSRC_DOC, body)])
+        self.assertEqual(kept.metrics.collected, 1)
+        self.assertEqual(skipped.metrics.collected, 0)
+        self.assertGreaterEqual(skipped.metrics.skipped, 1)
+
     def test_advisories_older_than_lookback_are_skipped(self) -> None:
         collector = MicrosoftCollector(
             client=HttpClient(

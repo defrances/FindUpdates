@@ -30,7 +30,7 @@ from findupdates.normalization.models import UpdateAdvisory, normalize_source_re
 
 LOGGER = logging.getLogger("findupdates.collectors.microsoft")
 DEFAULT_BASE_URL = "https://api.msrc.microsoft.com/cvrf/v3.0"
-DEFAULT_LOOKBACK = timedelta(days=7)
+DEFAULT_LOOKBACK = timedelta(days=45)
 DOCUMENT_LOOKBACK_FLOOR = timedelta(days=45)
 MSRC_API_VERSION = "2023-11-01"
 

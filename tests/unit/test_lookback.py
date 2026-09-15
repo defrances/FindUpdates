@@ -1,4 +1,4 @@
-"""Lookback window: last week of dated updates, not a historical dump."""
+"""Lookback window: last 45 days of dated updates, not a historical dump."""
 
 from __future__ import annotations
 
@@ -17,10 +17,20 @@ from findupdates.mvp.fixtures import microsoft_advisory
 
 
 class LookbackWindowTests(unittest.TestCase):
-    def test_defaults_are_seven_days(self) -> None:
+    def test_defaults_are_forty_five_days(self) -> None:
         settings = Settings()
-        self.assertEqual(settings.msrc_lookback_days, 7)
-        self.assertEqual(settings.intel_lookback_days, 7)
+        self.assertEqual(settings.msrc_lookback_days, 45)
+        self.assertEqual(settings.intel_lookback_days, 45)
+
+    def test_thirty_day_old_advisory_is_in_default_window(self) -> None:
+        now = datetime(2026, 9, 15, 12, tzinfo=UTC)
+        dated = replace(
+            microsoft_advisory(),
+            published_at=datetime(2026, 8, 16, 12, tzinfo=UTC),
+            revised_at=datetime(2026, 8, 16, 12, tzinfo=UTC),
+        )
+        self.assertTrue(advisory_in_lookback(dated, retrieved_at=now, lookback=timedelta(days=45)))
+        self.assertFalse(advisory_in_lookback(dated, retrieved_at=now, lookback=timedelta(days=7)))
 
     def test_window_includes_the_start_calendar_day(self) -> None:
         now = datetime(2026, 9, 15, 12, tzinfo=UTC)

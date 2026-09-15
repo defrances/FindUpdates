@@ -15,22 +15,23 @@ python -m findupdates.collectors --source msrc --checkpoint-dir .findupdates/che
 
 Environment:
 
-- `FINDUPDATES_MSRC_BASE_URL` / `FINDUPDATES_MSRC_LOOKBACK_DAYS` (default 7)
+- `FINDUPDATES_MSRC_BASE_URL` / `FINDUPDATES_MSRC_LOOKBACK_DAYS` (default 45)
 - `FINDUPDATES_INTEL_CSAF_INDEX_URL` (optional; unset means Intel is skipped)
-- `FINDUPDATES_INTEL_LOOKBACK_DAYS` (default 7)
+- `FINDUPDATES_INTEL_LOOKBACK_DAYS` (default 45)
 - `FINDUPDATES_CHECKPOINT_DIR` (default `.findupdates/checkpoints`)
 - `FINDUPDATES_COLLECTION_OUTPUT_DIR` (optional advisory JSON + `summary.json`)
 
 `--dry-run` prints the planned sources and does not open vendor HTTP sockets.
 
-Issue #73 defaults the lookback to **seven days**. MSRC still fetches monthly
-CVRF documents in a 45-day document window (Patch Tuesday lives in a month
-file). Per-CVE `ReleaseDate` / `RevisionDate` drive the weekly window.
-Document-level dates alone are catalog stamps: CVE years older than the
-window year are reprints and are not treated as this week's updates.
-Sentinel dates before year 2000 are not treated as this week's updates.
-An empty week is not `not_affected`. GitHub Actions packs detect output into
-one `.tgz` so `upload-artifact` does not walk tens of thousands of JSON files.
+Issue #77 defaults the lookback to **45 days** so one iteration covers a
+Patch Tuesday plus the prior month. MSRC still fetches monthly CVRF documents
+in at least that same 45-day document window. Per-CVE `ReleaseDate` /
+`RevisionDate` drive advisory emission. Document-level dates alone are catalog
+stamps: CVE years older than the window year are reprints and are not treated
+as in-window updates. Sentinel dates before year 2000 are not treated as
+in-window updates. An empty window is not `not_affected`. GitHub Actions packs
+detect output into one `.tgz` so `upload-artifact` does not walk tens of
+thousands of JSON files.
 
 ## Fail-closed behavior
 

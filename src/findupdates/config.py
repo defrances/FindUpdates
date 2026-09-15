@@ -20,9 +20,9 @@ class Settings:
     http_max_retries: int = 3
     http_min_interval_seconds: float = 0.25
     msrc_base_url: str = "https://api.msrc.microsoft.com/cvrf/v3.0"
-    msrc_lookback_days: int = 7
+    msrc_lookback_days: int = 45
     intel_csaf_index_url: str | None = None
-    intel_lookback_days: int = 7
+    intel_lookback_days: int = 45
     nvd_base_url: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     kev_url: str = (
         "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
@@ -48,9 +48,9 @@ class Settings:
             msrc_base_url=os.getenv(
                 "FINDUPDATES_MSRC_BASE_URL", "https://api.msrc.microsoft.com/cvrf/v3.0"
             ),
-            msrc_lookback_days=_lookback_days("FINDUPDATES_MSRC_LOOKBACK_DAYS", 7),
+            msrc_lookback_days=_lookback_days("FINDUPDATES_MSRC_LOOKBACK_DAYS", 45),
             intel_csaf_index_url=os.getenv("FINDUPDATES_INTEL_CSAF_INDEX_URL") or None,
-            intel_lookback_days=_lookback_days("FINDUPDATES_INTEL_LOOKBACK_DAYS", 7),
+            intel_lookback_days=_lookback_days("FINDUPDATES_INTEL_LOOKBACK_DAYS", 45),
             nvd_base_url=os.getenv(
                 "FINDUPDATES_NVD_BASE_URL",
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",

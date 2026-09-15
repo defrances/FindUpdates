@@ -28,7 +28,7 @@ from findupdates.collectors.result import CollectionResult
 from findupdates.normalization.models import normalize_source_record
 
 LOGGER = logging.getLogger("findupdates.collectors.intel")
-DEFAULT_LOOKBACK = timedelta(days=7)
+DEFAULT_LOOKBACK = timedelta(days=45)
 
 
 @dataclass(frozen=True, slots=True)
