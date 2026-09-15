@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Protocol
 
+from findupdates.agents.models import AgentAnalysis, AgentRole
 from findupdates.applicability.models import ApplicabilityResult
 from findupdates.changerecords.models import ChangeRecord
 from findupdates.inventory.models import DeviceInventory
@@ -141,6 +142,7 @@ class NotificationService:
         *,
         now: datetime,
         change_record_url: str,
+        analysis: AgentAnalysis | None = None,
     ) -> NotifyResult:
         """Emit at most one logical notification for this assessment snapshot."""
         previous = self._log.last_state(change.idempotency_key)
@@ -155,6 +157,7 @@ class NotificationService:
             change_record_url=change_record_url,
             previous=previous,
         )
+        event = _with_analysis_action(event, analysis)
         if self._log.last_fingerprint(change.idempotency_key) == event.fingerprint:
             return NotifyResult(event, (), True)
         if event.severity in self._policy.low_priority_severities:
@@ -286,3 +289,19 @@ class NotificationService:
                 continue
             attempts.append(adapter.send(event, attempts=self._policy.retry_attempts))
         return tuple(attempts)
+
+
+def _with_analysis_action(
+    event: NotificationEvent, analysis: AgentAnalysis | None
+) -> NotificationEvent:
+    """Echo Change Planning in the notification. Policy is unchanged."""
+    if analysis is None:
+        return event
+    planning = next(
+        (item.summary for item in analysis.sections if item.role is AgentRole.CHANGE_PLANNING),
+        "",
+    )
+    if not planning.strip():
+        return event
+    extra = f" Agentic AI (not authorization): {planning.strip()}"
+    return replace(event, recommended_next_action=event.recommended_next_action + extra)

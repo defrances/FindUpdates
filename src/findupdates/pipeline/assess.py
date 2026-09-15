@@ -13,7 +13,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from findupdates.agents import analysis_to_dict, analyze
+from findupdates.agents import (
+    BriefSource,
+    UpdateBriefing,
+    analysis_to_dict,
+    analyze,
+    brief_updates,
+    briefing_to_dict,
+)
 from findupdates.agents.models import AgentAnalysis
 from findupdates.agents.provider import AgentProvider
 from findupdates.applicability import evaluate
@@ -52,7 +59,7 @@ from findupdates.notifications.serialize import event_to_dict
 from findupdates.notifications.service import NotificationService
 from findupdates.pipeline.errors import AssessError
 from findupdates.risk import assess as assess_risk
-from findupdates.risk.models import RiskAssessment
+from findupdates.risk.models import PolicyResult, RiskAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +130,7 @@ def assess_collected(options: AssessOptions, *, now: datetime) -> AssessRun:
             store,
             options,
             now,
+            correlation_id=correlation_id,
             enrichment=enrichment,
             notifications=notifications,
         )
@@ -234,6 +242,20 @@ def write_analysis(output_dir: Path, analyses: tuple[AgentAnalysis, ...]) -> Non
         )
 
 
+def write_update_briefing(output_dir: Path, briefing: UpdateBriefing) -> None:
+    """Write the run-level Agentic AI analysis. Token fields are refused."""
+    payload = briefing_to_dict(briefing)
+    if "token" in payload:
+        raise AssessError("refusing to write briefing JSON that contains a token field")
+    folder = output_dir / "analysis"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "run.json").write_text(
+        json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (folder / "updates.md").write_text(briefing.markdown, encoding="utf-8")
+
+
 def write_notification(output_dir: Path, result: NotifyResult) -> None:
     """Write notification artifacts. Token fields are refused."""
     if result.event is None:
@@ -257,6 +279,7 @@ def _assess_all(
     options: AssessOptions,
     now: datetime,
     *,
+    correlation_id: str,
     enrichment: EnrichmentService | None,
     notifications: NotificationService | None,
 ) -> tuple[tuple[AssessedChange, ...], list[str]]:
@@ -265,6 +288,7 @@ def _assess_all(
         grouped[device.deployment_group].append(device)
     rows: list[AssessedChange] = []
     notes: list[str] = []
+    brief_sources: list[BriefSource] = []
     for advisory in advisories:
         set_log_context(advisory_id=advisory.advisory_id, stage="assess")
         products_before = advisory.affected_products
@@ -290,12 +314,14 @@ def _assess_all(
                 now,
             )
             policy_before = tuple(item.policy_result.value for item in risks)
+            bound = _analysis_for_group(tuple(members), risks, analyses)
             record = build_change_record(
                 advisory,
                 tuple(members),
                 apps,
                 risks,
                 now=now,
+                analysis=bound,
             )
             if tuple(item.policy_result.value for item in risks) != policy_before:
                 raise AssessError("analysis rewrote policy_result")
@@ -319,6 +345,15 @@ def _assess_all(
                 record,
                 options,
                 now,
+                analysis=bound,
+            )
+            brief_sources.extend(
+                BriefSource(
+                    title=advisory.title,
+                    deployment_group=group,
+                    analysis=item,
+                )
+                for item in analyses
             )
             if options.output_dir is not None and notice is not None and not notice.suppressed:
                 write_notification(options.output_dir, notice)
@@ -349,6 +384,11 @@ def _assess_all(
                     else any(item.used_fallback for item in analyses),
                 )
             )
+    if options.output_dir is not None and brief_sources:
+        write_update_briefing(
+            options.output_dir,
+            brief_updates(tuple(brief_sources), correlation_id=correlation_id, now=now),
+        )
     return tuple(rows), notes
 
 
@@ -385,6 +425,37 @@ def _notification_service(options: AssessOptions) -> NotificationService | None:
                 transport=options.webhook_transport,
             )
     return NotificationService(channels)
+
+
+def _analysis_for_group(
+    devices: tuple[DeviceInventory, ...],
+    risks: tuple[RiskAssessment, ...],
+    analyses: tuple[AgentAnalysis, ...],
+) -> AgentAnalysis | None:
+    if not analyses:
+        return None
+    if len(analyses) == 1:
+        return analyses[0]
+    by_device = {item.authoritative.device_id: item for item in analyses}
+    rank = {
+        PolicyResult.ALLOW_ANALYSIS: 0,
+        PolicyResult.REQUIRE_VALIDATION: 1,
+        PolicyResult.REQUIRE_APPROVAL: 2,
+        PolicyResult.HOLD: 3,
+        PolicyResult.BLOCK: 4,
+    }
+    worst = max(risks, key=lambda item: rank[item.policy_result])
+    if max(item.score for item in risks) != worst.score and worst.policy_result not in {
+        PolicyResult.HOLD,
+        PolicyResult.BLOCK,
+    }:
+        worst = max(risks, key=lambda item: item.score)
+    for device, risk in zip(devices, risks, strict=True):
+        if risk.assessment_id == worst.assessment_id:
+            found = by_device.get(device.device_id)
+            if found is not None:
+                return found
+    return analyses[0]
 
 
 def _analyze_group(
@@ -431,6 +502,8 @@ def _notify(
     record: ChangeRecord,
     options: AssessOptions,
     now: datetime,
+    *,
+    analysis: AgentAnalysis | None = None,
 ) -> NotifyResult | None:
     if notifications is None:
         return None
@@ -442,6 +515,7 @@ def _notify(
         record,
         now=now,
         change_record_url=_change_record_url(options, record),
+        analysis=analysis,
     )
 
 

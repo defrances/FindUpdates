@@ -113,7 +113,7 @@ def detect_updates(options: DetectOptions, *, now: datetime) -> DetectRun:
 
 
 def render_detect_report(source: str, run: AssessRun, assess_dir: Path) -> str:
-    """Markdown Job Summary: detected changes, AI sections, notify status."""
+    """Markdown Job Summary: Agentic AI analysis, changes, notify status."""
     lines = [
         "# FindUpdates detect",
         "",
@@ -121,8 +121,14 @@ def render_detect_report(source: str, run: AssessRun, assess_dir: Path) -> str:
         "",
         "This job does not deploy updates. AI analysis is not an authorization.",
         "",
-        "## Changes",
     ]
+    briefing = assess_dir / "analysis" / "updates.md"
+    if briefing.is_file():
+        lines.append(briefing.read_text(encoding="utf-8").strip())
+        lines.append("")
+    else:
+        lines.extend(["## Agentic AI analysis of updates", "", "No analysis artifacts.", ""])
+    lines.append("## Changes")
     if not run.changes:
         lines.append("No change records. Empty or failed assess is not treated as not_affected.")
     for item in run.changes:
@@ -141,26 +147,6 @@ def render_detect_report(source: str, run: AssessRun, assess_dir: Path) -> str:
             f"verdicts={','.join(item.verdicts)} policy=`{item.policy_result}` "
             f"score={item.risk_score} notify=`{notify}` ai=`{ai}`"
         )
-    lines.extend(["", "## Bounded AI"])
-    analysis_dir = assess_dir / "analysis"
-    files = sorted(analysis_dir.glob("*.json")) if analysis_dir.is_dir() else []
-    if not files:
-        lines.append("No analysis artifacts.")
-    for path in files:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        if "token" in payload:
-            continue
-        lines.append(
-            f"### {payload.get('advisory_id', path.stem)} / {payload.get('device_id', '')}"
-        )
-        lines.append(
-            f"fallback=`{payload.get('used_fallback')}` "
-            f"policy=`{payload.get('authoritative', {}).get('policy_result')}`"
-        )
-        for section in payload.get("sections", []):
-            role = section.get("role", "")
-            summary = section.get("summary", "")
-            lines.append(f"- **{role}**: {summary}")
     lines.extend(["", "## Notifications"])
     notify_dir = assess_dir / "notifications"
     notices = sorted(notify_dir.glob("*.json")) if notify_dir.is_dir() else []

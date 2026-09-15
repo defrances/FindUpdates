@@ -202,8 +202,10 @@ advisory file. `--inventory` is one device, a `{ "devices": [...] }` catalog,
 or a JSON array. Empty catalogs fail closed.
 
 `--dry-run` writes change-record JSON when `--output-dir` is set and performs
-no GitHub HTTP. Analysis JSON lands under `--output-dir/analysis/`.
-Notification JSON lands under `--output-dir/notifications/`.
+no GitHub HTTP. Per-device analysis JSON plus the run-level Agentic AI
+briefing (`analysis/updates.md`, `analysis/run.json`) land under
+`--output-dir/analysis/`. Notification JSON lands under
+`--output-dir/notifications/`.
 
 See [docs/pipeline-assess.md](docs/pipeline-assess.md).
 
@@ -219,8 +221,8 @@ workstation. Live mode requires `--inventory` and polls MSRC/Intel. Detect
 always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV.
 
 On GitHub: **Actions → Detect updates → Run workflow**. Default source is
-`fixtures`. The markdown report is appended to the Job Summary; artifacts
-are retained for 14 days.
+`fixtures`. The markdown report (starting with the Agentic AI analysis of
+updates) is appended to the Job Summary; artifacts are retained for 14 days.
 
 ### MVP end-to-end demo
 

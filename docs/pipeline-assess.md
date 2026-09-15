@@ -55,6 +55,12 @@ output, then assess + AI + notify. GitHub Actions `detect.yml` publishes the
 markdown report as a Job Summary (the GitHub-side notification) and uploads
 artifacts. `collect.yml` stays `--dry-run` and is not a pull-request check.
 
+Issue #67 forms a run-level Agentic AI analysis of the detected updates after
+those per-device records exist: `analysis/updates.md` and `analysis/run.json`.
+The detect Job Summary opens with that briefing. Change records cite
+`analysis:<id>` and reuse Change Planning as `validation_plan`. Notifications
+may echo that planning text; they cannot rewrite HOLD/BLOCK.
+
 ## Fail-closed behavior
 
 - Unreadable or malformed advisory JSON exits non-zero and does not upsert.

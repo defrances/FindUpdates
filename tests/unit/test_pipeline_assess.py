@@ -230,7 +230,9 @@ class PipelineAssessTests(unittest.TestCase):
             self.assertTrue(payload["acknowledgement_required"])
             self.assertTrue(summary["changes"][0]["analyzed"])
             self.assertTrue(summary["changes"][0]["analysis_fallback"])
-            analyses = list((out / "analysis").glob("*.json"))
+            analyses = [
+                path for path in (out / "analysis").glob("*.json") if path.name not in {"run.json"}
+            ]
             self.assertEqual(len(analyses), 1)
             analysis = json.loads(analyses[0].read_text(encoding="utf-8"))
             self.assertNotIn("token", analysis)
@@ -238,6 +240,10 @@ class PipelineAssessTests(unittest.TestCase):
                 analysis["authoritative"]["policy_result"],
                 summary["changes"][0]["policy_result"],
             )
+            briefing = (out / "analysis" / "updates.md").read_text(encoding="utf-8")
+            self.assertIn("Agentic AI analysis of updates", briefing)
+            notice = json.loads(notes[0].read_text(encoding="utf-8"))
+            self.assertIn("Agentic AI (not authorization)", notice["recommended_next_action"])
 
 
 def _enrichment_service(*, kev_name: str | None = None, down: bool = False) -> EnrichmentService:
@@ -501,8 +507,12 @@ class PipelineAssessAiTests(unittest.TestCase):
                 ),
                 now=NOW,
             )
-            files = list((out / "analysis").glob("*.json"))
+            files = [
+                path for path in (out / "analysis").glob("*.json") if path.name not in {"run.json"}
+            ]
             payload = json.loads(files[0].read_text(encoding="utf-8"))
+            briefing_md = (out / "analysis" / "updates.md").read_text(encoding="utf-8")
+            briefing = json.loads((out / "analysis" / "run.json").read_text(encoding="utf-8"))
         self.assertEqual(run.exit_code, 0)
         row = run.changes[0]
         self.assertEqual(row.policy_result, PolicyResult.REQUIRE_APPROVAL.value)
@@ -517,6 +527,14 @@ class PipelineAssessAiTests(unittest.TestCase):
         self.assertIsNotNone(stored)
         assert stored is not None
         self.assertEqual(stored.policy_result, row.policy_result)
+        self.assertIn(f"analysis:{payload['analysis_id']}", stored.evidence_links)
+        self.assertIn("Human approval is required", stored.validation_plan)
+        self.assertIn("Agentic AI analysis of updates", briefing_md)
+        self.assertIn(row.advisory_id, briefing_md)
+        self.assertIn(f"policy=`{row.policy_result}`", briefing_md)
+        self.assertNotIn("token", briefing)
+        self.assertEqual(briefing["item_count"], 1)
+        self.assertEqual(briefing["items"][0]["policy_result"], row.policy_result)
 
     def test_skip_ai_writes_no_analysis(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -535,9 +553,13 @@ class PipelineAssessAiTests(unittest.TestCase):
                 ),
                 now=NOW,
             )
+            analysis_dir = out / "analysis"
+            analysis_exists = analysis_dir.exists()
+            briefing_exists = (analysis_dir / "updates.md").exists()
         self.assertEqual(run.exit_code, 0)
         self.assertIsNone(run.changes[0].analyzed)
-        self.assertFalse((out / "analysis").exists())
+        self.assertFalse(analysis_exists)
+        self.assertFalse(briefing_exists)
         self.assertTrue(all("ai=" not in note for note in run.notes))
 
 

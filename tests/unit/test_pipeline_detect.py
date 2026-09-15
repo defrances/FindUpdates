@@ -23,9 +23,17 @@ class PipelineDetectTests(unittest.TestCase):
             )
             summary = json.loads((root / "assess" / "summary.json").read_text(encoding="utf-8"))
             report = (root / "report.md").read_text(encoding="utf-8")
-            analyses = list((root / "assess" / "analysis").glob("*.json"))
+            analyses = [
+                path
+                for path in (root / "assess" / "analysis").glob("*.json")
+                if path.name not in {"run.json"}
+            ]
             notices = list((root / "assess" / "notifications").glob("*.json"))
             payload = json.loads(analyses[0].read_text(encoding="utf-8"))
+            briefing = (root / "assess" / "analysis" / "updates.md").read_text(encoding="utf-8")
+            run_json = json.loads(
+                (root / "assess" / "analysis" / "run.json").read_text(encoding="utf-8")
+            )
         self.assertEqual(run.exit_code, 0)
         self.assertEqual(run.source, "fixtures")
         policies = {item["advisory_id"]: item["policy_result"] for item in summary["changes"]}
@@ -36,8 +44,15 @@ class PipelineDetectTests(unittest.TestCase):
         self.assertGreaterEqual(len(analyses), 2)
         self.assertGreaterEqual(len(notices), 1)
         self.assertNotIn("token", payload)
+        self.assertNotIn("token", run_json)
+        self.assertEqual(run_json["item_count"], len(analyses))
         self.assertIn("FindUpdates detect", report)
-        self.assertIn("Bounded AI", report)
+        self.assertIn("Agentic AI analysis of updates", report)
+        self.assertIn("Agentic AI analysis of updates", briefing)
+        self.assertIn("Policy snapshot", briefing)
+        for advisory_id, policy in policies.items():
+            self.assertIn(advisory_id, briefing)
+            self.assertIn(f"policy=`{policy}`", briefing)
         self.assertIn("Notifications", report)
         self.assertNotIn("token", report.lower())
 
@@ -48,7 +63,7 @@ class PipelineDetectTests(unittest.TestCase):
             report = (root / "report.md").read_text(encoding="utf-8")
         self.assertEqual(code, 0)
         self.assertIn("FindUpdates detect", report)
-        self.assertIn("Bounded AI", report)
+        self.assertIn("Agentic AI analysis of updates", report)
         self.assertIn("Notifications", report)
 
 
