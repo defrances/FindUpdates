@@ -76,8 +76,9 @@ allow-listed HTTPS only. The HTML is the operator artifact; Job Summary stays
 markdown.
 
 Issue #73 limits live detect collection to the last seven days of dated
-vendor updates. MSRC monthly CVRF files are still fetched; only advisories in
-that week are assessed. An empty week is not treated as not_affected.
+vendor updates. Issue #75 does not copy the monthly CVRF revision onto every
+CVE; older CVE years with only catalog stamps are skipped. Detect artifacts
+are packed into one archive. An empty week is not treated as not_affected.
 
 ## Fail-closed behavior
 

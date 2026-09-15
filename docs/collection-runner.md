@@ -25,9 +25,12 @@ Environment:
 
 Issue #73 defaults the lookback to **seven days**. MSRC still fetches monthly
 CVRF documents in a 45-day document window (Patch Tuesday lives in a month
-file), then emits only advisories whose `revised_at` or `published_at` falls
-in the seven-day window. Sentinel dates before year 2000 are not treated as
-this week's updates. An empty week is not `not_affected`.
+file). Per-CVE `ReleaseDate` / `RevisionDate` drive the weekly window.
+Document-level dates alone are catalog stamps: CVE years older than the
+window year are reprints and are not treated as this week's updates.
+Sentinel dates before year 2000 are not treated as this week's updates.
+An empty week is not `not_affected`. GitHub Actions packs detect output into
+one `.tgz` so `upload-artifact` does not walk tens of thousands of JSON files.
 
 ## Fail-closed behavior
 

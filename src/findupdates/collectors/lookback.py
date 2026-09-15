@@ -28,3 +28,32 @@ def advisory_in_lookback(
     """Use revised_at when present so a weekly revision is not dropped."""
     event = advisory.revised_at or advisory.published_at
     return in_lookback(event, retrieved_at=retrieved_at, lookback=lookback)
+
+
+def msrc_advisory_in_lookback(
+    advisory: UpdateAdvisory, *, retrieved_at: datetime, lookback: timedelta
+) -> bool:
+    """Monthly CVRF document dates are catalog stamps, not per-CVE events.
+
+    A CVE without its own revision stays in the weekly window only when its
+    CVE year is at least the lookback window's year. Older years are reprints.
+    """
+    if advisory.revised_at is not None:
+        return advisory_in_lookback(advisory, retrieved_at=retrieved_at, lookback=lookback)
+    year = cve_year(advisory)
+    start = window_start(retrieved_at, lookback)
+    if year is None or year < start.year:
+        return False
+    return advisory_in_lookback(advisory, retrieved_at=retrieved_at, lookback=lookback)
+
+
+def cve_year(advisory: UpdateAdvisory) -> int | None:
+    if not advisory.cve_ids:
+        return None
+    parts = advisory.cve_ids[0].split("-")
+    if len(parts) < 2:
+        return None
+    try:
+        return int(parts[1])
+    except ValueError:
+        return None

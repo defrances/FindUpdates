@@ -66,11 +66,18 @@ jobs:
             cat "${OUT}/report.md" >> "${GITHUB_STEP_SUMMARY}"
           fi
           exit "${status}"
+      - name: Pack detect artifacts
+        if: always()
+        run: |
+          OUT="${RUNNER_TEMP}/findupdates-detect"
+          if [ -d "${OUT}" ]; then
+            tar -C "${RUNNER_TEMP}" -czf "${RUNNER_TEMP}/findupdates-detect.tgz" findupdates-detect
+          fi
       - name: Upload detect artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: findupdates-detect
-          path: ${{ runner.temp }}/findupdates-detect
+          path: ${{ runner.temp }}/findupdates-detect.tgz
           if-no-files-found: warn
           retention-days: 14

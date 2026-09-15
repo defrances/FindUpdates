@@ -70,7 +70,6 @@ def parse_cvrf_document(
     identification = mapping(pick(tracking, "Identification")) or {}
     document_id = text_of(pick(identification, "ID")) or "unknown-document"
     published_at = parse_datetime(pick(tracking, "InitialReleaseDate")) or retrieved_at
-    revised_at = parse_datetime(pick(tracking, "CurrentReleaseDate"))
     products = _product_index(mapping(pick(document, "ProductTree")))
 
     records: list[NormalizedSourceRecord] = []
@@ -86,7 +85,6 @@ def parse_cvrf_document(
                     vulnerability,
                     document_id=document_id,
                     published_at=published_at,
-                    revised_at=revised_at,
                     retrieved_at=retrieved_at,
                     source_url=source_url,
                     products=products,
@@ -104,7 +102,6 @@ def _parse_vulnerability(
     *,
     document_id: str,
     published_at: datetime,
-    revised_at: datetime | None,
     retrieved_at: datetime,
     source_url: str,
     products: dict[str, tuple[str, str | None]],
@@ -124,6 +121,8 @@ def _parse_vulnerability(
     cvss = _cvss(vulnerability)
     exploited, exploitability = _exploitation(vulnerability)
     references = _references(vulnerability, cve)
+    own_published = parse_datetime(pick(vulnerability, "ReleaseDate"))
+    own_revised = parse_datetime(pick(vulnerability, "RevisionDate", "CurrentReleaseDate"))
     provenance = Provenance(
         source_url=source_url,
         raw_sha256=sha256_json(dict(vulnerability)),
@@ -136,8 +135,8 @@ def _parse_vulnerability(
         vendor_advisory_id=vendor_advisory_id,
         title=_strip_markup(title),
         description=_strip_markup(description) if description else None,
-        published_at=parse_datetime(pick(vulnerability, "ReleaseDate")) or published_at,
-        revised_at=revised_at,
+        published_at=own_published or published_at,
+        revised_at=own_revised or own_published,
         collected_at=retrieved_at,
         parser_version=PARSER_VERSION,
         provenance=provenance,

@@ -77,6 +77,43 @@ class MicrosoftCollectorTests(unittest.TestCase):
         self.assertEqual(result.metrics.collected, 0)
         self.assertGreaterEqual(result.metrics.skipped, 1)
 
+    def test_catalog_stamp_skips_older_cve_year(self) -> None:
+        payload = json.loads((FIXTURES / "msrc-cvrf-windows.json").read_text(encoding="utf-8"))
+        reprint = json.loads(json.dumps(payload["Vulnerability"][0]))
+        reprint["CVE"] = "CVE-2019-0808"
+        reprint["Title"] = {"Value": "Win32k Elevation of Privilege Vulnerability"}
+        payload["Vulnerability"] = [payload["Vulnerability"][0], reprint]
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+            lookback=timedelta(days=7),
+        )
+        result = collector.collect_documents([(MSRC_DOC, json.dumps(payload).encode("utf-8"))])
+        ids = {item.cve_ids[0] for item in result.advisories if item.cve_ids}
+        self.assertEqual(ids, {"CVE-2026-12345"})
+        self.assertEqual(result.metrics.collected, 1)
+        self.assertGreaterEqual(result.metrics.skipped, 1)
+
+    def test_per_cve_release_date_keeps_older_cve_in_window(self) -> None:
+        payload = json.loads((FIXTURES / "msrc-cvrf-windows.json").read_text(encoding="utf-8"))
+        reprint = json.loads(json.dumps(payload["Vulnerability"][0]))
+        reprint["CVE"] = "CVE-2019-0808"
+        reprint["Title"] = {"Value": "Win32k Elevation of Privilege Vulnerability"}
+        reprint["ReleaseDate"] = "2026-09-10T00:00:00Z"
+        payload["Vulnerability"] = [reprint]
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+            lookback=timedelta(days=7),
+        )
+        result = collector.collect_documents([(MSRC_DOC, json.dumps(payload).encode("utf-8"))])
+        self.assertEqual(result.advisories[0].cve_ids, ("CVE-2019-0808",))
+        self.assertEqual(result.metrics.collected, 1)
+
     def test_idempotent_reread_is_unchanged(self) -> None:
         collector = MicrosoftCollector(
             client=HttpClient(

@@ -21,7 +21,7 @@ from findupdates.collectors.jsonutil import (
     sha256_bytes,
     text_of,
 )
-from findupdates.collectors.lookback import advisory_in_lookback, window_start
+from findupdates.collectors.lookback import msrc_advisory_in_lookback, window_start
 from findupdates.collectors.metrics import CollectionMetrics
 from findupdates.collectors.microsoft.cvrf import parse_cvrf_document
 from findupdates.collectors.microsoft.xmlcvrf import parse_cvrf_xml
@@ -137,7 +137,7 @@ class MicrosoftCollector:
                 advisory = normalize_source_record(record)
                 advisory_key = f"adv:{advisory.vendor_advisory_id or advisory.advisory_id}"
                 next_hashes[advisory_key] = record.provenance.raw_sha256
-                if not advisory_in_lookback(
+                if not msrc_advisory_in_lookback(
                     advisory, retrieved_at=collected_at, lookback=self._lookback
                 ):
                     metrics = metrics.add(skipped=1)

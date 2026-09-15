@@ -6,7 +6,12 @@ import unittest
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from findupdates.collectors.lookback import advisory_in_lookback, in_lookback, window_start
+from findupdates.collectors.lookback import (
+    advisory_in_lookback,
+    in_lookback,
+    msrc_advisory_in_lookback,
+    window_start,
+)
 from findupdates.config import Settings
 from findupdates.mvp.fixtures import microsoft_advisory
 
@@ -44,6 +49,17 @@ class LookbackWindowTests(unittest.TestCase):
             revised_at=None,
         )
         self.assertFalse(advisory_in_lookback(stale, retrieved_at=now, lookback=timedelta(days=7)))
+
+    def test_msrc_catalog_stamp_drops_older_cve_year(self) -> None:
+        now = datetime(2026, 9, 15, 12, tzinfo=UTC)
+        current = microsoft_advisory()
+        reprint = replace(current, cve_ids=("CVE-2019-0808",), revised_at=None)
+        self.assertTrue(
+            msrc_advisory_in_lookback(current, retrieved_at=now, lookback=timedelta(days=7))
+        )
+        self.assertFalse(
+            msrc_advisory_in_lookback(reprint, retrieved_at=now, lookback=timedelta(days=7))
+        )
 
 
 if __name__ == "__main__":
