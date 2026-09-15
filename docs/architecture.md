@@ -37,6 +37,8 @@ External advisory text and vendor payloads are untrusted input. They may influen
 
 NVD and CISA KEV enrichment is a prioritization signal. It does not authorize deployment and must not overwrite vendor product-status evidence. Absence from KEV is not proof of no exploitation. Source outages keep last-known cached facts instead of erasing them.
 
+Unknown, stale or weakly identified inventory must not produce `not_affected`. Strong product identity is required before a negative match.
+
 AI output is advisory evidence, not an authorization signal. Applicability, risk score, hard gates, approvals and target scope must remain deterministic and independently auditable.
 
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.

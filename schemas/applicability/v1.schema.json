@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/applicability/v1.schema.json",
+  "title": "ApplicabilityResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "result_id",
+    "advisory_id",
+    "device_id",
+    "verdict",
+    "confidence",
+    "blocks_automatic_deployment",
+    "evidence",
+    "source_fields",
+    "inventory_fields",
+    "missing_data",
+    "input_fingerprint",
+    "evaluated_at",
+    "needs_reassessment",
+    "previous_fingerprint"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "reasonCode": {
+      "type": "string",
+      "enum": [
+        "VERSION_IN_RANGE",
+        "VERSION_OUT_OF_RANGE",
+        "PRODUCT_ID_MATCH",
+        "CPE_MATCH",
+        "PURL_MATCH",
+        "PRODUCT_FAMILY_MATCH",
+        "ARCHITECTURE_MISMATCH",
+        "VENDOR_NOT_AFFECTED",
+        "VENDOR_AFFECTED",
+        "VENDOR_FIXED",
+        "MISSING_VERSION",
+        "STALE_INVENTORY",
+        "FRESHNESS_UNKNOWN",
+        "UNVERIFIED_INVENTORY",
+        "EMPTY_AFFECTED_PRODUCTS",
+        "NAME_AMBIGUOUS",
+        "NO_DETERMINISTIC_MATCH",
+        "ADVISORY_INCOMPLETE"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason_code", "detail", "source_fields", "inventory_fields"],
+      "properties": {
+        "reason_code": {"$ref": "#/$defs/reasonCode"},
+        "detail": {"$ref": "#/$defs/nonEmptyString"},
+        "source_fields": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "inventory_fields": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "result_id": {"$ref": "#/$defs/nonEmptyString"},
+    "advisory_id": {"$ref": "#/$defs/nonEmptyString"},
+    "device_id": {"$ref": "#/$defs/nonEmptyString"},
+    "verdict": {
+      "type": "string",
+      "enum": ["affected", "not_affected", "possibly_affected", "unknown"]
+    },
+    "confidence": {"type": "string", "enum": ["high", "medium", "low", "unknown"]},
+    "blocks_automatic_deployment": {"type": "boolean"},
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "source_fields": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "inventory_fields": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "missing_data": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "input_fingerprint": {"$ref": "#/$defs/nonEmptyString"},
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "needs_reassessment": {"type": "boolean"},
+    "previous_fingerprint": {"type": ["string", "null"], "minLength": 1}
+  }
+}
