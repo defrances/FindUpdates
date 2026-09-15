@@ -69,6 +69,11 @@ def main(
         action="store_true",
         help="Write/print records without upserting to GitHub. No token required.",
     )
+    assess.add_argument(
+        "--skip-enrichment",
+        action="store_true",
+        help="Skip NVD/CISA KEV lookups. Use for air-gapped or fixture-only runs.",
+    )
     args = parser.parse_args(argv)
     settings = Settings.from_env()
     configure_logging(settings.log_level)
@@ -84,6 +89,8 @@ def main(
             environ=environ,
             transport=transport,
             repository=args.repository or settings.github_repository,
+            skip_enrichment=args.skip_enrichment,
+            settings=settings,
         ),
         now=datetime.now(UTC),
     )

@@ -5,20 +5,31 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlencode
 
 from findupdates.changerecords import MemoryChangeStore
+from findupdates.collectors.http import HttpClient, HttpTransportResult, MappingTransport
+from findupdates.enrichment import DEFAULT_KEV_URL, DEFAULT_NVD_URL, EnrichmentService
+from findupdates.enrichment.kev import KevClient
+from findupdates.enrichment.nvd import NvdClient
 from findupdates.inventory import device_to_dict, dict_to_device
 from findupdates.mvp.fixtures import NOW, imaging_workstation, intel_advisory, microsoft_advisory
+from findupdates.normalization.models import TriState
 from findupdates.normalization.serialize import advisory_to_dict
 from findupdates.pipeline.__main__ import main
 from findupdates.pipeline.assess import AssessOptions, assess_collected
 from findupdates.risk.models import PolicyResult
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ENRICHMENT_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "enrichment"
+NVD_URL = f"{DEFAULT_NVD_URL}?{urlencode({'cveId': 'CVE-2026-12345'})}"
+
 
 def _write_advisories(root: Path, *advisories: object) -> Path:
     folder = root / "advisories" / "msrc"
-    folder.mkdir(parents=True)
+    folder.mkdir(parents=True, exist_ok=True)
     (root / "advisories" / "summary.json").write_text(
         json.dumps({"correlation_id": "collect-test", "exit_code": 0}) + "\n",
         encoding="utf-8",
@@ -48,6 +59,7 @@ class PipelineAssessTests(unittest.TestCase):
                     inventory=_write_inventory(root),
                     output_dir=root / "out",
                     store=store,
+                    skip_enrichment=True,
                 ),
                 now=NOW,
             )
@@ -72,6 +84,7 @@ class PipelineAssessTests(unittest.TestCase):
                 advisories=_write_advisories(root, microsoft_advisory()),
                 inventory=_write_inventory(root),
                 store=store,
+                skip_enrichment=True,
             )
             first = assess_collected(options, now=NOW)
             second = assess_collected(options, now=NOW)
@@ -89,6 +102,7 @@ class PipelineAssessTests(unittest.TestCase):
                     advisories=_write_advisories(root, intel_advisory()),
                     inventory=_write_inventory(root),
                     store=store,
+                    skip_enrichment=True,
                 ),
                 now=NOW,
             )
@@ -112,6 +126,7 @@ class PipelineAssessTests(unittest.TestCase):
                     advisories=_write_advisories(root, microsoft_advisory()),
                     inventory=inventory,
                     store=MemoryChangeStore(),
+                    skip_enrichment=True,
                 ),
                 now=NOW,
             )
@@ -130,6 +145,7 @@ class PipelineAssessTests(unittest.TestCase):
                     advisories=folder,
                     inventory=_write_inventory(root),
                     store=MemoryChangeStore(),
+                    skip_enrichment=True,
                 ),
                 now=NOW,
             )
@@ -145,6 +161,7 @@ class PipelineAssessTests(unittest.TestCase):
                     advisories=_write_advisories(root, microsoft_advisory()),
                     inventory=_write_inventory(root, stale=True),
                     store=store,
+                    skip_enrichment=True,
                 ),
                 now=NOW,
             )
@@ -176,6 +193,7 @@ class PipelineAssessTests(unittest.TestCase):
                     "--store",
                     "github",
                     "--dry-run",
+                    "--skip-enrichment",
                 ],
                 environ={},
             )
@@ -183,6 +201,100 @@ class PipelineAssessTests(unittest.TestCase):
             summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(len(summary["changes"]), 1)
             self.assertIsNone(summary["changes"][0]["issue_number"])
+
+
+def _enrichment_service(*, kev_name: str | None = None, down: bool = False) -> EnrichmentService:
+    if down:
+        responses: dict[str, HttpTransportResult | bytes] = {
+            NVD_URL: HttpTransportResult(status=503, body=b"down"),
+            DEFAULT_KEV_URL: HttpTransportResult(status=503, body=b"down"),
+        }
+    else:
+        kev_file = "kev-empty.json" if kev_name is None else kev_name
+        responses = {
+            NVD_URL: (ENRICHMENT_FIXTURES / "nvd-cve-2026-12345.json").read_bytes(),
+            DEFAULT_KEV_URL: (ENRICHMENT_FIXTURES / kev_file).read_bytes(),
+        }
+    client = HttpClient(
+        transport=MappingTransport(responses), max_retries=0, min_interval_seconds=0
+    )
+    return EnrichmentService(
+        nvd=NvdClient(client=client),
+        kev=KevClient(client=client),
+        max_age=timedelta(hours=24),
+        now=NOW,
+    )
+
+
+class PipelineAssessEnrichmentTests(unittest.TestCase):
+    def test_kev_listing_raises_known_exploited_and_score(self) -> None:
+        baseline = MemoryChangeStore()
+        listed = MemoryChangeStore()
+        advisory = microsoft_advisory()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            skipped = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, advisory),
+                    inventory=_write_inventory(root),
+                    store=baseline,
+                    skip_enrichment=True,
+                ),
+                now=NOW,
+            )
+            service = _enrichment_service(kev_name="kev-with-cve.json")
+            enriched_advisory = service.enrich(advisory).advisory
+            self.assertEqual(enriched_advisory.affected_products, advisory.affected_products)
+            out = root / "out"
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, advisory),
+                    inventory=_write_inventory(root),
+                    output_dir=out,
+                    store=listed,
+                    enrichment=service,
+                ),
+                now=NOW,
+            )
+            self.assertEqual(skipped.exit_code, 0)
+            self.assertEqual(run.exit_code, 0)
+            self.assertEqual(skipped.changes[0].known_exploited, TriState.UNKNOWN.value)
+            self.assertEqual(run.changes[0].known_exploited, TriState.TRUE.value)
+            self.assertGreater(run.changes[0].risk_score, skipped.changes[0].risk_score)
+            self.assertTrue((out / "enrichment" / "CVE-2026-12345.json").is_file())
+
+    def test_kev_absence_does_not_force_not_exploited(self) -> None:
+        store = MemoryChangeStore()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, microsoft_advisory()),
+                    inventory=_write_inventory(root),
+                    store=store,
+                    enrichment=_enrichment_service(kev_name="kev-empty.json"),
+                ),
+                now=NOW,
+            )
+        self.assertEqual(run.exit_code, 0)
+        self.assertEqual(run.changes[0].known_exploited, TriState.UNKNOWN.value)
+
+    def test_enrichment_outage_does_not_abort_assess(self) -> None:
+        store = MemoryChangeStore()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, microsoft_advisory()),
+                    inventory=_write_inventory(root),
+                    store=store,
+                    enrichment=_enrichment_service(down=True),
+                ),
+                now=NOW,
+            )
+        self.assertEqual(run.exit_code, 0)
+        self.assertEqual(run.changes[0].known_exploited, TriState.UNKNOWN.value)
+        self.assertEqual(run.changes[0].policy_result, PolicyResult.REQUIRE_APPROVAL.value)
 
 
 if __name__ == "__main__":

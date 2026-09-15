@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from findupdates.collectors.http import ByteTransport, HttpClient
 from findupdates.config import Settings
@@ -20,6 +20,7 @@ def enrichment_service_from_settings(
     nvd_api_key: str | None = None,
     nvd_transport: ByteTransport | None = None,
     kev_transport: ByteTransport | None = None,
+    now: datetime | None = None,
 ) -> EnrichmentService:
     """Build an enrichment service.
 
@@ -45,4 +46,5 @@ def enrichment_service_from_settings(
         nvd=NvdClient(client=nvd_http, base_url=settings.nvd_base_url),
         kev=KevClient(client=kev_http, url=settings.kev_url),
         max_age=timedelta(hours=settings.enrichment_cache_max_age_hours),
+        now=now,
     )

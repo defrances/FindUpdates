@@ -23,6 +23,14 @@ from findupdates.changerecords import (
 from findupdates.changerecords.github import IssuesTransport
 from findupdates.changerecords.models import ChangeRecord
 from findupdates.changerecords.store import ChangeRecordStore, UpsertResult
+from findupdates.collectors.http import ByteTransport
+from findupdates.config import Settings
+from findupdates.enrichment import (
+    EnrichmentService,
+    enrichment_service_from_settings,
+    enrichment_to_dict,
+)
+from findupdates.enrichment.models import CveEnrichment
 from findupdates.ids import stable_id
 from findupdates.inventory import DeviceInventory, load_inventory, refresh_for_assessment
 from findupdates.logging import set_correlation_id, set_log_context
@@ -43,6 +51,11 @@ class AssessOptions:
     environ: Mapping[str, str] | None = None
     transport: IssuesTransport | None = None
     repository: str | None = None
+    skip_enrichment: bool = False
+    enrichment: EnrichmentService | None = None
+    nvd_transport: ByteTransport | None = None
+    kev_transport: ByteTransport | None = None
+    settings: Settings | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +64,8 @@ class AssessedChange:
     deployment_group: str
     verdicts: tuple[str, ...]
     policy_result: str
+    risk_score: int
+    known_exploited: str
     record_id: str
     idempotency_key: str
     created: bool | None
@@ -76,7 +91,10 @@ def assess_collected(options: AssessOptions, *, now: datetime) -> AssessRun:
             refresh_for_assessment(item, now) for item in load_inventory(options.inventory)
         )
         store = options.store if options.dry_run else _resolve_store(options)
-        changes, notes = _assess_all(advisories, devices, store, options, now)
+        enrichment = _enrichment_service(options, now)
+        changes, notes = _assess_all(
+            advisories, devices, store, options, now, enrichment=enrichment
+        )
     except (AssessError, ChangeStoreError, OSError, ValueError, KeyError, TypeError) as exc:
         set_log_context(stage="none")
         return AssessRun(correlation_id, (), 1, [str(exc)])
@@ -119,6 +137,8 @@ def write_summary(run: AssessRun, output_dir: Path) -> Path:
                 "deployment_group": item.deployment_group,
                 "verdicts": list(item.verdicts),
                 "policy_result": item.policy_result,
+                "risk_score": item.risk_score,
+                "known_exploited": item.known_exploited,
                 "idempotency_key": item.idempotency_key,
                 "created": item.created,
                 "issue_number": item.issue_number,
@@ -145,12 +165,31 @@ def write_record(output_dir: Path, record: ChangeRecord) -> Path:
     return path
 
 
+def write_enrichment(output_dir: Path, records: tuple[CveEnrichment, ...]) -> None:
+    """Write enrichment artifacts. Token fields are refused."""
+    if not records:
+        return
+    folder = output_dir / "enrichment"
+    folder.mkdir(parents=True, exist_ok=True)
+    for record in records:
+        payload = enrichment_to_dict(record)
+        if "token" in payload:
+            raise AssessError("refusing to write enrichment JSON that contains a token field")
+        path = folder / f"{record.cve_id}.json"
+        path.write_text(
+            json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+
 def _assess_all(
     advisories: tuple[UpdateAdvisory, ...],
     devices: tuple[DeviceInventory, ...],
     store: ChangeRecordStore | None,
     options: AssessOptions,
     now: datetime,
+    *,
+    enrichment: EnrichmentService | None,
 ) -> tuple[tuple[AssessedChange, ...], list[str]]:
     grouped: dict[str, list[DeviceInventory]] = defaultdict(list)
     for device in devices:
@@ -159,6 +198,14 @@ def _assess_all(
     notes: list[str] = []
     for advisory in advisories:
         set_log_context(advisory_id=advisory.advisory_id, stage="assess")
+        products_before = advisory.affected_products
+        if enrichment is not None:
+            outcome = enrichment.enrich(advisory)
+            advisory = outcome.advisory
+            if advisory.affected_products != products_before:
+                raise AssessError("enrichment overwrote vendor affected_products")
+            if options.output_dir is not None:
+                write_enrichment(options.output_dir, outcome.records)
         for group, members in grouped.items():
             apps = tuple(evaluate(advisory, device, now=now) for device in members)
             risks = tuple(
@@ -180,7 +227,8 @@ def _assess_all(
                 write_record(options.output_dir, record)
             notes.append(
                 f"{advisory.advisory_id} group={group} "
-                f"policy={record.policy_result} key={record.idempotency_key}"
+                f"policy={record.policy_result} key={record.idempotency_key} "
+                f"known_exploited={advisory.known_exploited.value}"
             )
             rows.append(
                 AssessedChange(
@@ -188,6 +236,8 @@ def _assess_all(
                     deployment_group=group,
                     verdicts=tuple(item.verdict.value for item in apps),
                     policy_result=record.policy_result,
+                    risk_score=record.risk_score,
+                    known_exploited=advisory.known_exploited.value,
                     record_id=record.change_id,
                     idempotency_key=record.idempotency_key,
                     created=None if upsert is None else upsert.created,
@@ -195,6 +245,20 @@ def _assess_all(
                 )
             )
     return tuple(rows), notes
+
+
+def _enrichment_service(options: AssessOptions, now: datetime) -> EnrichmentService | None:
+    if options.skip_enrichment:
+        return None
+    if options.enrichment is not None:
+        return options.enrichment
+    settings = options.settings or Settings.from_env()
+    return enrichment_service_from_settings(
+        settings,
+        nvd_transport=options.nvd_transport,
+        kev_transport=options.kev_transport,
+        now=now,
+    )
 
 
 def _resolve_store(options: AssessOptions) -> ChangeRecordStore:
