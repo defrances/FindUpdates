@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/notification-event/v1.schema.json",
+  "title": "NotificationEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "kind",
+    "fingerprint",
+    "severity",
+    "advisory_ids",
+    "cve_ids",
+    "package_ids",
+    "vendor",
+    "risk_score",
+    "policy_result",
+    "reason_codes",
+    "affected_device_count",
+    "deployment_groups",
+    "device_models",
+    "applicability_confidence",
+    "applicability_unknowns",
+    "recommended_next_action",
+    "workflow_state",
+    "change_record_url",
+    "change_idempotency_key",
+    "acknowledgement_required",
+    "acknowledged",
+    "previous_state",
+    "created_at"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "policy_result", "affected_device_count", "kev", "workflow_state"],
+      "properties": {
+        "severity": {"$ref": "#/$defs/nonEmptyString"},
+        "policy_result": {"$ref": "#/$defs/nonEmptyString"},
+        "affected_device_count": {"type": "integer", "minimum": 0},
+        "kev": {"type": "boolean"},
+        "workflow_state": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "event_id": {"$ref": "#/$defs/nonEmptyString"},
+    "kind": {
+      "type": "string",
+      "enum": ["advisory", "operational_failure", "escalation", "digest"]
+    },
+    "fingerprint": {"$ref": "#/$defs/nonEmptyString"},
+    "severity": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "EMERGENCY"]
+    },
+    "advisory_ids": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "cve_ids": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "package_ids": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "vendor": {"$ref": "#/$defs/nonEmptyString"},
+    "risk_score": {"type": "integer", "minimum": 0, "maximum": 100},
+    "policy_result": {"$ref": "#/$defs/nonEmptyString"},
+    "reason_codes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "affected_device_count": {"type": "integer", "minimum": 0},
+    "deployment_groups": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "device_models": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "applicability_confidence": {"$ref": "#/$defs/nonEmptyString"},
+    "applicability_unknowns": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "recommended_next_action": {"$ref": "#/$defs/nonEmptyString"},
+    "workflow_state": {"$ref": "#/$defs/nonEmptyString"},
+    "change_record_url": {"$ref": "#/$defs/nonEmptyString"},
+    "change_idempotency_key": {"$ref": "#/$defs/nonEmptyString"},
+    "acknowledgement_required": {"type": "boolean"},
+    "acknowledged": {"type": "boolean"},
+    "previous_state": {
+      "anyOf": [{"type": "null"}, {"$ref": "#/$defs/state"}]
+    },
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

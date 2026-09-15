@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "channels": {
+    "LOW": ["github"],
+    "MEDIUM": ["github"],
+    "HIGH": ["github", "webhook"],
+    "CRITICAL": ["github", "webhook"],
+    "EMERGENCY": ["github", "webhook"]
+  },
+  "acknowledge_required": ["HIGH", "CRITICAL", "EMERGENCY"],
+  "escalate_after_minutes": {
+    "CRITICAL": 60,
+    "EMERGENCY": 15
+  },
+  "low_priority_severities": ["LOW"],
+  "low_priority_batch_window_minutes": 60,
+  "low_priority_rate_limit": 5,
+  "retry_attempts": 3
+}

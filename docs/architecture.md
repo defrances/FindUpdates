@@ -45,6 +45,8 @@ AI output is advisory evidence, not an authorization signal. Applicability, risk
 
 GitHub Issues store one change record per advisory and deployment group. Promotion workflows read `policy_result` from that record; HOLD/BLOCK cannot be overridden by a dispatch input. Canary and production jobs require GitHub Environments. Pull requests do not run the promotion workflow.
 
+Severity-aware notifications fan out from that change record. Unchanged rescans are suppressed. Material risk, KEV, device-count, policy or operational-failure changes emit a new event. Notifications cannot alter applicability, score or policy.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification
