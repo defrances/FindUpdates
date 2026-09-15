@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/health-observation/v1.schema.json",
+  "title": "HealthObservation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observation_id",
+    "device_id",
+    "stage",
+    "domain",
+    "state",
+    "observed_at",
+    "heartbeat_at",
+    "detail",
+    "before_version",
+    "after_version"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "observation_id": {"$ref": "#/$defs/nonEmptyString"},
+    "device_id": {"$ref": "#/$defs/nonEmptyString"},
+    "stage": {
+      "type": "string",
+      "enum": ["lab", "canary", "ring-1", "ring-2", "production"]
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "install_success",
+        "boot",
+        "windows_service",
+        "medical_application",
+        "peripheral_connectivity",
+        "network_connectivity",
+        "driver_firmware",
+        "resources",
+        "clinical_smoke",
+        "heartbeat"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": ["HEALTHY", "DEGRADED", "FAILED", "INCONCLUSIVE"]
+    },
+    "observed_at": {"type": "string", "format": "date-time"},
+    "heartbeat_at": {"type": ["string", "null"], "format": "date-time"},
+    "detail": {"$ref": "#/$defs/nonEmptyString"},
+    "before_version": {"$ref": "#/$defs/nonEmptyString"},
+    "after_version": {"$ref": "#/$defs/nonEmptyString"}
+  }
+}

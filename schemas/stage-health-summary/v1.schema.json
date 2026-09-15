@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/stage-health-summary/v1.schema.json",
+  "title": "StageHealthSummary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "summary_id",
+    "rollout_id",
+    "stage",
+    "overall",
+    "pause_rollout",
+    "window_minutes",
+    "window_ends_at",
+    "reason_codes",
+    "devices",
+    "signals",
+    "observed_at"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "summary_id": {"$ref": "#/$defs/nonEmptyString"},
+    "rollout_id": {"$ref": "#/$defs/nonEmptyString"},
+    "stage": {"$ref": "#/$defs/nonEmptyString"},
+    "overall": {
+      "type": "string",
+      "enum": ["HEALTHY", "DEGRADED", "FAILED", "INCONCLUSIVE"]
+    },
+    "pause_rollout": {"type": "boolean"},
+    "window_minutes": {"type": "integer", "minimum": 0},
+    "window_ends_at": {"type": "string", "format": "date-time"},
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+          "required": ["device_id", "overall", "stale_heartbeat", "missing_telemetry", "failed_domains", "inconclusive_domains"],
+        "properties": {
+          "device_id": {"$ref": "#/$defs/nonEmptyString"},
+          "overall": {
+            "type": "string",
+            "enum": ["HEALTHY", "DEGRADED", "FAILED", "INCONCLUSIVE"]
+          },
+          "stale_heartbeat": {"type": "boolean"},
+          "missing_telemetry": {"type": "boolean"},
+          "failed_domains": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/nonEmptyString"}
+          },
+          "inconclusive_domains": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/nonEmptyString"}
+          }
+        }
+      }
+    },
+    "signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed",
+        "success_count",
+        "failure_count",
+        "crash_count",
+        "connectivity_loss",
+        "validation_regressions",
+        "inconclusive_critical"
+      ],
+      "properties": {
+        "observed": {"type": "boolean"},
+        "success_count": {"type": "integer", "minimum": 0},
+        "failure_count": {"type": "integer", "minimum": 0},
+        "crash_count": {"type": "integer", "minimum": 0},
+        "connectivity_loss": {"type": "integer", "minimum": 0},
+        "validation_regressions": {"type": "integer", "minimum": 0},
+        "inconclusive_critical": {"type": "integer", "minimum": 0}
+      }
+    },
+    "observed_at": {"type": "string", "format": "date-time"}
+  }
+}

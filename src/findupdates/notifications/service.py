@@ -217,6 +217,12 @@ class NotificationService:
             return NotifyResult(event, (), True)
         return self._emit(event)
 
+    def publish(self, event: NotificationEvent) -> NotifyResult:
+        """Emit an already-built event (used by post-deploy monitoring)."""
+        if self._log.last_fingerprint(event.change_idempotency_key) == event.fingerprint:
+            return NotifyResult(event, (), True)
+        return self._emit(event)
+
     def acknowledge(self, event_id: str, *, actor: str, now: datetime) -> NotificationEvent:
         """Record that a human saw a severity that requires acknowledgement."""
         if not actor.strip():

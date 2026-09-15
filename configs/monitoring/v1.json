@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "status": "draft",
+  "heartbeat_max_age_minutes": 15,
+  "pause_on": ["FAILED", "INCONCLUSIVE", "DEGRADED"],
+  "critical_domains": [
+    "boot",
+    "medical_application",
+    "clinical_smoke",
+    "heartbeat"
+  ],
+  "rollback_permitted_domains": ["boot", "install_success"],
+  "rollback_enabled_kinds": ["os", "driver"],
+  "windows_minutes": {
+    "os:low": 30,
+    "os:medium": 60,
+    "os:high": 120,
+    "os:critical": 240,
+    "driver:high": 120,
+    "driver:critical": 240,
+    "firmware:high": 360,
+    "firmware:critical": 480,
+    "default": 60
+  }
+}

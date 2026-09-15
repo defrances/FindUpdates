@@ -51,10 +51,12 @@ class MockDeploymentAdapter:
         *,
         expected_package: PackageIdentity | None = None,
         inject_error: ErrorCode | None = None,
+        inject_rollback_error: ErrorCode | None = None,
     ) -> None:
         self._capabilities = capabilities or WINDOWS_CAPABILITIES
         self._expected_package = expected_package
         self._inject_error = inject_error
+        self._inject_rollback_error = inject_rollback_error
         self._by_id: dict[str, DeploymentResult] = {}
         self._by_key: dict[str, str] = {}
         self._install_index: dict[tuple[str, tuple[str, ...]], str] = {}
@@ -142,6 +144,10 @@ class MockDeploymentAdapter:
             )
         if current.status not in {DeploymentStatus.SUCCEEDED, DeploymentStatus.IN_PROGRESS}:
             raise BackendRejected("rollback is only available for in-progress or succeeded jobs")
+        if self._inject_rollback_error is ErrorCode.PARTIAL_FAILURE:
+            raise PartialFailure("backend rolled back a subset of approved targets")
+        if self._inject_rollback_error is ErrorCode.TIMEOUT:
+            raise DeploymentTimeout("backend timed out during rollback")
         return self._transition(current, DeploymentStatus.ROLLED_BACK, "rollback", now)
 
     def cancel(

@@ -53,6 +53,8 @@ Deployment adapters execute only already-authorized requests. They verify the ap
 
 Staged rollout proceeds lab → canary → ring-1 → ring-2 → production. Ring membership is hashed at plan time. Promotion requires observed health, a completed observation window and stage thresholds; INCONCLUSIVE critical signals pause. Clinically critical devices skip early rings. Maintenance windows are timezone-aware. Partial adapter failure does not promote.
 
+Post-deployment monitoring classifies each device as HEALTHY, DEGRADED, FAILED or INCONCLUSIVE. Stale or missing heartbeats are not healthy. Automatic pause is allowed; automatic rollback is not. Rollback requires adapter capability, product policy and explicit authorization on clinically critical devices.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification

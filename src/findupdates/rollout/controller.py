@@ -328,6 +328,11 @@ class RolloutController:
             )
         )
 
+    def plan_for(self, rollout_id: str) -> RolloutPlan:
+        """Return the frozen plan bound to an in-memory rollout."""
+        state = self._require(rollout_id)
+        return self._plans[state.plan_id]
+
     def state(self, rollout_id: str) -> RolloutState:
         return self._require(rollout_id)
 
