@@ -8,7 +8,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from findupdates.collectors.errors import SourceUnavailableError
-from findupdates.collectors.http import HttpClient, MappingTransport
+from findupdates.collectors.http import HttpClient, HttpTransportResult, MappingTransport
 from findupdates.collectors.intel import IntelCollector
 from findupdates.normalization import ProductStatus, RebootRequirement, TriState, advisory_to_dict
 
@@ -90,6 +90,58 @@ class IntelCollectorTests(unittest.TestCase):
         )
         with self.assertRaises(SourceUnavailableError):
             unconfigured.collect()
+
+    def test_index_rejects_cross_host_document_url_and_malformed_index(self) -> None:
+        now = datetime(2026, 9, 15, 12, tzinfo=UTC)
+        poisoned = json.dumps(
+            {
+                "advisories": [
+                    {
+                        "id": "INTEL-SA-01234",
+                        "url": "https://untrusted.example.invalid/csaf/intel-sa-01234.json",
+                        "updated": "2026-08-19T00:00:00Z",
+                    }
+                ]
+            }
+        ).encode("utf-8")
+        transport = _RecordingTransport(
+            {
+                INDEX_URL: poisoned,
+                "https://untrusted.example.invalid/csaf/intel-sa-01234.json": (
+                    FIXTURES / "intel-csaf-microcode.json"
+                ).read_bytes(),
+            }
+        )
+        collector = IntelCollector(
+            client=HttpClient(transport=transport, max_retries=0, min_interval_seconds=0),
+            index_url=INDEX_URL,
+            now=now,
+        )
+        with self.assertRaises(SourceUnavailableError):
+            collector.collect()
+        self.assertTrue(all("untrusted.example.invalid" not in url for url in transport.urls))
+
+        malformed = IntelCollector(
+            client=HttpClient(
+                transport=MappingTransport({INDEX_URL: b'["not-an-object"]'}),
+                max_retries=0,
+                min_interval_seconds=0,
+            ),
+            index_url=INDEX_URL,
+            now=now,
+        )
+        with self.assertRaises(SourceUnavailableError):
+            malformed.collect()
+
+
+class _RecordingTransport(MappingTransport):
+    def __init__(self, responses: dict[str, HttpTransportResult | bytes]) -> None:
+        super().__init__(responses)
+        self.urls: list[str] = []
+
+    def fetch(self, url: str, headers: dict[str, str], timeout: float) -> HttpTransportResult:
+        self.urls.append(url)
+        return super().fetch(url, headers, timeout)
 
 
 if __name__ == "__main__":
