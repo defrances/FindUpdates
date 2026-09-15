@@ -10,8 +10,11 @@ Simulated: vendor HTTP (fixtures on disk), Intune/OEM backends
 heartbeats (`simulate_healthy` / failure injectors), GitHub Issues
 (`MemoryChangeStore`).
 
-Not production-ready: live collector polling, GitHub Environment reviewers,
-signed device agents, WORM evidence archive, hosted dashboards.
+Not production-ready: live collector polling against vendor networks from GitHub
+Actions (the #52 runner is dry-run there; operators poll locally), GitHub
+Environment reviewers, signed device agents, WORM evidence archive, hosted
+dashboards. Collector checkpoints and CLI exist; the MVP e2e path still uses
+on-disk fixtures rather than a live poll handoff.
 
 ## How to reproduce
 

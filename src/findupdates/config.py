@@ -30,6 +30,8 @@ class Settings:
     enrichment_cache_max_age_hours: int = 24
     ai_enabled: bool = False
     ai_provider: str = "offline"
+    checkpoint_dir: str = ".findupdates/checkpoints"
+    collection_output_dir: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -62,6 +64,8 @@ class Settings:
             ai_enabled=_bool_env("FINDUPDATES_AI_ENABLED", False),
             ai_provider=os.getenv("FINDUPDATES_AI_PROVIDER", "offline").strip().lower()
             or "offline",
+            checkpoint_dir=os.getenv("FINDUPDATES_CHECKPOINT_DIR", ".findupdates/checkpoints"),
+            collection_output_dir=os.getenv("FINDUPDATES_COLLECTION_OUTPUT_DIR") or None,
         )
 
 

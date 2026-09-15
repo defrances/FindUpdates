@@ -12,4 +12,4 @@ A missing index URL, a malformed index, or failure of every selected document fe
 
 Reboot requirement and known exploitation stay `unknown` unless later enrichment asserts them. The record describes Intel component impact only. It is not authorization to install a generic Intel firmware/BIOS package on a medical device.
 
-This collector does not deploy updates, assign the authoritative project risk score, or call an AI model.
+This collector does not deploy updates, assign the authoritative project risk score, or call an AI model. Scheduled/CLI polling is documented in `docs/collection-runner.md` (#52).

@@ -23,4 +23,4 @@ Microsoft's OpenAPI contract advertises JSON and XML representations. In practic
 
 A monthly CVRF document is normalized into one `UpdateAdvisory` per vulnerability using the canonical v1 schema (`reboot_requirement`, `known_exploited` and product-status are enumerations with explicit `unknown`). Each record preserves CVE and KB identifiers, affected MSRC product IDs/CPE/builds, source references, revision timestamp and raw payload hash. Missing reboot or exploitation facts stay unknown; they are never stored as boolean `false`.
 
-This collector does not deploy updates, assign the authoritative project risk score, or call an AI model.
+This collector does not deploy updates, assign the authoritative project risk score, or call an AI model. Scheduled/CLI polling is documented in `docs/collection-runner.md` (#52).
