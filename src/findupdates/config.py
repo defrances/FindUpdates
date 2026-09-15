@@ -28,6 +28,8 @@ class Settings:
         "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     )
     enrichment_cache_max_age_hours: int = 24
+    ai_enabled: bool = False
+    ai_provider: str = "offline"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -57,4 +59,14 @@ class Settings:
             enrichment_cache_max_age_hours=int(
                 os.getenv("FINDUPDATES_ENRICHMENT_CACHE_MAX_AGE_HOURS", "24")
             ),
+            ai_enabled=_bool_env("FINDUPDATES_AI_ENABLED", False),
+            ai_provider=os.getenv("FINDUPDATES_AI_PROVIDER", "offline").strip().lower()
+            or "offline",
         )
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
