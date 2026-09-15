@@ -8,9 +8,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import urlparse
 
 from findupdates.collectors.checkpoint import CollectionCheckpoint
-from findupdates.collectors.errors import SourceUnavailableError
+from findupdates.collectors.errors import ParseError, SourceUnavailableError
 from findupdates.collectors.http import HttpClient
 from findupdates.collectors.intel.csaf import parse_csaf_document
 from findupdates.collectors.jsonutil import (
@@ -69,14 +70,22 @@ class IntelCollector:
         failed = 0
         errors: list[str] = []
         for entry in selected:
+            document_url = _document_url(self._index_url, entry.url)
+            if document_url is None:
+                failed += 1
+                errors.append(
+                    f"{entry.document_id}: document URL is not on the configured index host"
+                )
+                LOGGER.warning("intel CSAF document URL rejected document_id=%s", entry.document_id)
+                continue
             try:
-                fetched = self._client.get_bytes(entry.url)
+                fetched = self._client.get_bytes(document_url)
             except SourceUnavailableError as exc:
                 failed += 1
                 errors.append(f"{entry.document_id}: {exc}")
                 LOGGER.warning("intel CSAF fetch failed document_id=%s", entry.document_id)
                 continue
-            documents.append((entry.url, fetched.body))
+            documents.append((document_url, fetched.body))
         if not documents and failed:
             raise SourceUnavailableError(
                 "all selected Intel CSAF documents failed; last checkpoint preserved"
@@ -110,7 +119,7 @@ class IntelCollector:
                 record = parse_csaf_document(
                     parsed, source_url=source_url, retrieved_at=collected_at
                 )
-            except (SourceUnavailableError, ValueError, TypeError, KeyError) as exc:
+            except (ParseError, SourceUnavailableError, ValueError, TypeError, KeyError) as exc:
                 errors.append(f"{source_url}: {exc}")
                 metrics = metrics.add(parse_error=1)
                 continue
@@ -143,16 +152,36 @@ def _load_json_object(body: bytes) -> Mapping[str, Any]:
     try:
         parsed_obj = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise SourceUnavailableError("Intel CSAF document is not valid JSON") from exc
+        raise ParseError("Intel CSAF document is not valid JSON") from exc
     parsed = mapping(parsed_obj)
     if parsed is None:
-        raise SourceUnavailableError("Intel CSAF document JSON must be an object")
+        raise ParseError("Intel CSAF document JSON must be an object")
     return parsed
+
+
+def _document_url(index_url: str, candidate: str) -> str | None:
+    """Allow only https URLs on the same host as the configured index."""
+    index = urlparse(index_url)
+    document = urlparse(candidate)
+    if document.scheme != "https" or not document.hostname:
+        return None
+    if not index.hostname or document.netloc.casefold() != index.netloc.casefold():
+        return None
+    if document.username or document.password:
+        return None
+    return candidate
 
 
 def _index_entries(payload: object) -> list[_IndexEntry]:
     root = mapping(payload)
-    items = list_of(pick(root, "advisories") if root is not None else payload)
+    if root is None:
+        raise SourceUnavailableError("Intel CSAF index must be a JSON object")
+    raw_advisories = pick(root, "advisories")
+    if raw_advisories is None:
+        raise SourceUnavailableError("Intel CSAF index is missing advisories")
+    if not isinstance(raw_advisories, list):
+        raise SourceUnavailableError("Intel CSAF index advisories must be a list")
+    items = list_of(raw_advisories)
     entries: list[_IndexEntry] = []
     for item in items:
         node = mapping(item)
