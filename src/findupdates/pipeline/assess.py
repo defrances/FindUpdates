@@ -58,6 +58,7 @@ from findupdates.notifications.models import DeliveryStatus, NotifyResult
 from findupdates.notifications.serialize import event_to_dict
 from findupdates.notifications.service import NotificationService
 from findupdates.pipeline.errors import AssessError
+from findupdates.pipeline.html_report import render_station_html
 from findupdates.pipeline.recommend import (
     StationRecommendation,
     recommend_station,
@@ -279,6 +280,10 @@ def write_recommendations(
     )
     markdown = render_station_report(rows, correlation_id=correlation_id)
     (output_dir / "recommendations.md").write_text(markdown, encoding="utf-8")
+    html_doc = render_station_html(rows, correlation_id=correlation_id)
+    if "<script" in html_doc.casefold():
+        raise AssessError("refusing to write HTML that contains a script tag")
+    (output_dir / "recommendations.html").write_text(html_doc, encoding="utf-8")
 
 
 def write_notification(output_dir: Path, result: NotifyResult) -> None:

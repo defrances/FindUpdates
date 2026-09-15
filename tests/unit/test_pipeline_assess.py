@@ -558,6 +558,7 @@ class PipelineAssessAiTests(unittest.TestCase):
             briefing_exists = (analysis_dir / "updates.md").exists()
             recs = json.loads((out / "recommendations.json").read_text(encoding="utf-8"))
             rec_md = (out / "recommendations.md").read_text(encoding="utf-8")
+            rec_html = (out / "recommendations.html").read_text(encoding="utf-8")
         self.assertEqual(run.exit_code, 0)
         self.assertIsNone(run.changes[0].analyzed)
         self.assertFalse(analysis_exists)
@@ -565,6 +566,8 @@ class PipelineAssessAiTests(unittest.TestCase):
         self.assertTrue(all("ai=" not in note for note in run.notes))
         self.assertNotIn("token", recs)
         self.assertIn("Station update recommendations", rec_md)
+        self.assertIn('<html lang="en">', rec_html)
+        self.assertNotIn("<script", rec_html.casefold())
 
 
 if __name__ == "__main__":

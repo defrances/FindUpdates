@@ -121,8 +121,8 @@ flowchart TD
   Fix --> Detect["python -m findupdates.pipeline detect"]
   Poll --> Detect
   Detect --> Assess["assess: risk → bounded AI → dry-run upsert → notify"]
-  Assess --> Report["report.md"]
-  Report --> Summary["GitHub Actions Job Summary"]
+  Assess --> Report["report.md + report.html"]
+  Report --> Summary["GitHub Actions Job Summary (markdown)"]
   Report --> Artifacts["upload-artifact findupdates-detect"]
   Detect -.->|"never"| NoDeploy["Intune / OEM / production install"]
 ```
@@ -222,8 +222,9 @@ Detect always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV
 
 On GitHub: **Actions → Detect updates → Run workflow**. Default source is
 `fixtures`. Live uses `configs/inventory/synthetic-workstations.json`. The Job
-Summary leads with per-station recommendations (package, explanation, official
-URL) and is not an install authorization. Artifacts are retained for 14 days.
+Summary leads with per-station markdown (package, explanation, official URL)
+and is not an install authorization. Open `report.html` in the artifact for the
+English HTML report. Artifacts are retained for 14 days.
 
 ### MVP end-to-end demo
 

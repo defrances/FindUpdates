@@ -107,6 +107,7 @@ def detect_updates(options: DetectOptions, *, now: datetime) -> DetectRun:
     notes.extend(assess.notes)
     report = render_detect_report(source, assess, output / "assess")
     _write_report(output, report)
+    _copy_html_report(output)
     return DetectRun(
         source=source,
         assess=assess,
@@ -162,9 +163,10 @@ def render_detect_report(source: str, run: AssessRun, assess_dir: Path) -> str:
             lines.append(f"- … {extra} more change records in summary.json")
     lines.extend(["", "## Artifacts"])
     lines.append(
-        "Full bounded AI briefing is `assess/analysis/updates.md` in the job artifact. "
-        "It is omitted here so GitHub Job Summary stays under 1 MB."
+        "Operator HTML report is `report.html` (English, self-contained). "
+        "GitHub Job Summary stays markdown so it remains under 1 MB."
     )
+    lines.append("Full bounded AI briefing is `assess/analysis/updates.md` in the job artifact.")
     lines.append("")
     return "\n".join(lines)
 
@@ -209,6 +211,12 @@ def _offline_ai_settings(settings: Settings | None) -> Settings:
 
 def _write_report(output: Path, report: str) -> None:
     (output / "report.md").write_text(report, encoding="utf-8")
+
+
+def _copy_html_report(output: Path) -> None:
+    source = output / "assess" / "recommendations.html"
+    if source.is_file():
+        (output / "report.html").write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
 
 
 def _failure_report(source: str, notes: list[str]) -> str:

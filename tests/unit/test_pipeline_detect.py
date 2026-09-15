@@ -38,6 +38,8 @@ class PipelineDetectTests(unittest.TestCase):
                 (root / "assess" / "recommendations.json").read_text(encoding="utf-8")
             )
             rec_md = (root / "assess" / "recommendations.md").read_text(encoding="utf-8")
+            rec_html = (root / "assess" / "recommendations.html").read_text(encoding="utf-8")
+            report_html = (root / "report.html").read_text(encoding="utf-8")
         self.assertEqual(run.exit_code, 0)
         self.assertEqual(run.source, "fixtures")
         policies = {item["policy_result"] for item in summary["changes"]}
@@ -60,6 +62,10 @@ class PipelineDetectTests(unittest.TestCase):
             report,
         )
         self.assertIn("Station update recommendations", rec_md)
+        self.assertIn('<html lang="en">', rec_html)
+        self.assertIn("Candidate for validation", rec_html)
+        self.assertEqual(rec_html, report_html)
+        self.assertIn("report.html", report)
         self.assertNotIn("token", recs)
         listed_actions = {item["action"] for item in recs["items"]}
         self.assertIn("candidate_for_validation", listed_actions)

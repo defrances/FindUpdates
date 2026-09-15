@@ -67,7 +67,13 @@ recommendation report (`recommendations.md`). The report names which package
 is in scope for which station, with a deterministic explanation and an
 allow-listed official vendor URL. It does not authorize installation.
 GitHub Actions live detect uses that catalog. Job Summary leads with the
-station report and omits the full AI briefing so the Summary stays under 1 MB.
+station markdown so the Summary stays under 1 MB.
+
+Issue #71 also writes a self-contained English HTML report
+(`recommendations.html`, copied to detect `report.html`). Untrusted titles are
+escaped. There is no third-party CSS or JavaScript. Official links remain
+allow-listed HTTPS only. The HTML is the operator artifact; Job Summary stays
+markdown.
 
 ## Fail-closed behavior
 

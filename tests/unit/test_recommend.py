@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 from findupdates.applicability import evaluate
 from findupdates.inventory import load_synthetic_workstations, refresh_for_assessment
 from findupdates.mvp.fixtures import NOW, microsoft_advisory
+from findupdates.pipeline.html_report import render_station_html
 from findupdates.pipeline.recommend import (
     CANDIDATE,
     official_advisory_url,
@@ -48,6 +50,22 @@ class StationRecommendationTests(unittest.TestCase):
         self.assertIn("KB5060001", markdown)
         self.assertIn("msrc.microsoft.com", markdown)
         self.assertNotIn("token", markdown.lower())
+        document = render_station_html((row,), correlation_id="assess-test")
+        self.assertIn('<html lang="en">', document)
+        self.assertIn("Candidate for validation", document)
+        self.assertIn("KB5060001", document)
+        self.assertIn(
+            'href="https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-12345"',
+            document,
+        )
+        self.assertIn("does not authorize installation", document)
+        self.assertNotIn("<script", document.casefold())
+        escaped = render_station_html(
+            (replace(row, title="<img src=x onerror=alert(1)>"),),
+            correlation_id="assess-test",
+        )
+        self.assertNotIn("<img", escaped)
+        self.assertIn("&lt;img", escaped)
 
 
 if __name__ == "__main__":
