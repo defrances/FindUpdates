@@ -39,6 +39,8 @@ NVD and CISA KEV enrichment is a prioritization signal. It does not authorize de
 
 Unknown, stale or weakly identified inventory must not produce `not_affected`. Strong product identity is required before a negative match.
 
+Risk scoring is a versioned, deterministic function of advisory, inventory, applicability and policy. Hard gates override numeric score. Unknown applicability is `BLOCK`. High CVSS and KEV raise the score and the approval burden; they do not authorize production deployment. Invalid policy fails closed. Draft policy under `configs/policies/` is not production approval.
+
 AI output is advisory evidence, not an authorization signal. Applicability, risk score, hard gates, approvals and target scope must remain deterministic and independently auditable.
 
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.

@@ -1,15 +1,29 @@
-version: "0.1-draft"
+version: "1.0"
 status: draft
 
-# Placeholder weights for Issue #19. They are not approved for production use.
+# Machine-readable policy loaded by the engine is configs/policies/v1.json.
+# This YAML is the operator-facing copy of the same draft ruleset.
+# These values are not approved for production use.
+
 risk_bands:
-  low: [0, 29]
-  medium: [30, 49]
-  high: [50, 69]
-  critical: [70, 84]
-  emergency: [85, 100]
+  LOW: [0, 29]
+  MEDIUM: [30, 49]
+  HIGH: [50, 69]
+  CRITICAL: [70, 84]
+  EMERGENCY: [85, 100]
+
+band_policy:
+  LOW: ALLOW_ANALYSIS
+  MEDIUM: REQUIRE_VALIDATION
+  HIGH: REQUIRE_APPROVAL
+  CRITICAL: REQUIRE_APPROVAL
+  EMERGENCY: REQUIRE_APPROVAL
 
 hard_gates:
-  unknown_applicability: BLOCK
-  stale_inventory: HOLD
-  unknown_oem_firmware_qualification: HOLD
+  UNKNOWN_APPLICABILITY: BLOCK
+  POSSIBLY_AFFECTED: HOLD
+  STALE_INVENTORY: HOLD
+  UNKNOWN_CLINICAL_CRITICALITY: HOLD
+  UNKNOWN_NETWORK_EXPOSURE: HOLD
+  FIRMWARE_CRITICAL_UNKNOWN_OEM: HOLD
+  LOW_CONFIDENCE_AFFECTED: HOLD

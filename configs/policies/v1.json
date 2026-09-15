@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "status": "draft",
+  "score_cap": 100,
+  "weights": {
+    "cvss": 35,
+    "vendor_severity": 12,
+    "clinical_criticality": 15,
+    "network_exposure": 10
+  },
+  "modifiers": {
+    "kev": 22,
+    "exploitability_high": 10,
+    "network_no_auth": 8,
+    "reboot_required": 6,
+    "firmware_or_bios": 8,
+    "known_issues": 5,
+    "no_workaround": 4
+  },
+  "bands": {
+    "LOW": [0, 29],
+    "MEDIUM": [30, 49],
+    "HIGH": [50, 69],
+    "CRITICAL": [70, 84],
+    "EMERGENCY": [85, 100]
+  },
+  "band_policy": {
+    "LOW": "ALLOW_ANALYSIS",
+    "MEDIUM": "REQUIRE_VALIDATION",
+    "HIGH": "REQUIRE_APPROVAL",
+    "CRITICAL": "REQUIRE_APPROVAL",
+    "EMERGENCY": "REQUIRE_APPROVAL"
+  },
+  "hard_gates": {
+    "UNKNOWN_APPLICABILITY": "BLOCK",
+    "POSSIBLY_AFFECTED": "HOLD",
+    "STALE_INVENTORY": "HOLD",
+    "UNKNOWN_CLINICAL_CRITICALITY": "HOLD",
+    "UNKNOWN_NETWORK_EXPOSURE": "HOLD",
+    "FIRMWARE_CRITICAL_UNKNOWN_OEM": "HOLD",
+    "LOW_CONFIDENCE_AFFECTED": "HOLD"
+  }
+}

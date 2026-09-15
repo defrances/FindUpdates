@@ -4,16 +4,65 @@
   "title": "RiskAssessment",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "assessment_id", "advisory_id", "device_id", "policy_version", "score", "severity", "policy_result", "reason_codes"],
+  "required": [
+    "schema_version",
+    "assessment_id",
+    "advisory_id",
+    "device_id",
+    "policy_version",
+    "score",
+    "severity",
+    "policy_result",
+    "reason_codes",
+    "contributions",
+    "hard_gates_applied",
+    "input_fingerprint",
+    "assessed_at",
+    "needs_reassessment"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
   "properties": {
     "schema_version": {"const": "1.0"},
-    "assessment_id": {"type": "string", "minLength": 1},
-    "advisory_id": {"type": "string", "minLength": 1},
-    "device_id": {"type": "string", "minLength": 1},
-    "policy_version": {"type": "string", "minLength": 1},
-    "score": {"type": "number", "minimum": 0, "maximum": 100},
-    "severity": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "EMERGENCY"]},
-    "policy_result": {"type": "string", "enum": ["ALLOW_ANALYSIS", "REQUIRE_VALIDATION", "REQUIRE_APPROVAL", "HOLD", "BLOCK"]},
-    "reason_codes": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+    "assessment_id": {"$ref": "#/$defs/nonEmptyString"},
+    "advisory_id": {"$ref": "#/$defs/nonEmptyString"},
+    "device_id": {"$ref": "#/$defs/nonEmptyString"},
+    "policy_version": {"$ref": "#/$defs/nonEmptyString"},
+    "score": {"type": "integer", "minimum": 0, "maximum": 100},
+    "severity": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "EMERGENCY"]
+    },
+    "policy_result": {
+      "type": "string",
+      "enum": ["ALLOW_ANALYSIS", "REQUIRE_VALIDATION", "REQUIRE_APPROVAL", "HOLD", "BLOCK"]
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"},
+      "minItems": 1
+    },
+    "contributions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "points", "detail"],
+        "properties": {
+          "code": {"$ref": "#/$defs/nonEmptyString"},
+          "points": {"type": "number"},
+          "detail": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    },
+    "hard_gates_applied": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "input_fingerprint": {"$ref": "#/$defs/nonEmptyString"},
+    "assessed_at": {"type": "string", "format": "date-time"},
+    "needs_reassessment": {"type": "boolean"}
   }
 }
