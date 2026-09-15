@@ -7,93 +7,252 @@
   "required": [
     "schema_version",
     "advisory_id",
-    "source_advisory_id",
     "vendor",
     "source",
+    "vendor_advisory_id",
     "title",
     "description",
     "published_at",
     "revised_at",
-    "cve_ids",
-    "kb_ids",
-    "vendor_severity",
-    "affected_products",
-    "fixed_versions",
-    "reboot_required",
-    "known_issues",
-    "prerequisites",
-    "workarounds",
-    "references",
-    "raw_sha256",
     "collected_at",
-    "parser_version"
+    "parser_version",
+    "cve_ids",
+    "package_ids",
+    "references",
+    "vendor_severity",
+    "cvss",
+    "update_category",
+    "reboot_requirement",
+    "known_exploited",
+    "exploitability",
+    "affected_products",
+    "remediations",
+    "prerequisites",
+    "supersedes",
+    "superseded_by",
+    "known_issues",
+    "vendor_recommendation",
+    "completeness",
+    "incomplete_fields",
+    "normalization_confidence",
+    "conflicts",
+    "field_provenance",
+    "provenance"
   ],
   "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "nullableString": {"type": ["string", "null"], "minLength": 1},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "cveId": {"type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"},
+    "triState": {"type": "string", "enum": ["true", "false", "unknown"]},
+    "confidence": {"type": "string", "enum": ["high", "medium", "low", "unknown"]},
+    "productStatus": {
+      "type": "string",
+      "enum": ["affected", "not_affected", "fixed", "unknown"]
+    },
+    "cvssRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "vector", "base_score", "source"],
+      "properties": {
+        "version": {"type": "string", "enum": ["2.0", "3.0", "3.1", "4.0", "unknown"]},
+        "vector": {"$ref": "#/$defs/nullableString"},
+        "base_score": {"type": ["number", "null"], "minimum": 0, "maximum": 10},
+        "source": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "packageId": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["kb", "driver", "firmware", "bios", "microcode", "other", "unknown"]
+        },
+        "value": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
     "affectedProduct": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["product_id", "name", "architecture", "version"],
+      "required": [
+        "vendor",
+        "product",
+        "version_range",
+        "builds",
+        "architectures",
+        "vendor_product_id",
+        "cpe",
+        "status"
+      ],
       "properties": {
-        "product_id": {"type": "string", "minLength": 1},
-        "name": {"type": ["string", "null"], "minLength": 1},
-        "architecture": {"type": ["string", "null"], "minLength": 1},
-        "version": {"type": ["string", "null"], "minLength": 1}
+        "vendor": {"$ref": "#/$defs/nonEmptyString"},
+        "product": {"$ref": "#/$defs/nonEmptyString"},
+        "version_range": {"$ref": "#/$defs/nullableString"},
+        "builds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "architectures": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "enum": ["x64", "x86", "arm64", "other", "unknown"]}
+        },
+        "vendor_product_id": {"$ref": "#/$defs/nullableString"},
+        "cpe": {"$ref": "#/$defs/nullableString"},
+        "status": {"$ref": "#/$defs/productStatus"}
+      }
+    },
+    "remediation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "description", "fixed_version", "package_id"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["vendor_fix", "workaround", "mitigation", "unavailable", "unknown"]
+        },
+        "description": {"$ref": "#/$defs/nullableString"},
+        "fixed_version": {"$ref": "#/$defs/nullableString"},
+        "package_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/packageId"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "fieldProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_path", "source"],
+      "properties": {
+        "field_path": {"$ref": "#/$defs/nonEmptyString"},
+        "source": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_path", "reason"],
+      "properties": {
+        "field_path": {"$ref": "#/$defs/nonEmptyString"},
+        "reason": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_url", "raw_sha256", "retrieved_at", "content_type"],
+      "properties": {
+        "source_url": {"type": ["string", "null"], "format": "uri"},
+        "raw_sha256": {"$ref": "#/$defs/sha256"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "content_type": {"$ref": "#/$defs/nullableString"}
       }
     }
   },
   "properties": {
     "schema_version": {"const": "1.0"},
-    "advisory_id": {"type": "string", "minLength": 1},
-    "source_advisory_id": {"type": "string", "minLength": 1},
+    "advisory_id": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Stable internal identity. Derived from vendor + vendor advisory ID, else CVE set, else raw hash."
+    },
     "vendor": {"type": "string", "enum": ["microsoft", "intel", "other"]},
-    "source": {"type": "string", "minLength": 1},
-    "title": {"type": "string", "minLength": 1},
-    "description": {"type": ["string", "null"], "minLength": 1},
+    "source": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Collector/source name such as msrc or intel-csaf."
+    },
+    "vendor_advisory_id": {"$ref": "#/$defs/nullableString"},
+    "title": {"$ref": "#/$defs/nonEmptyString"},
+    "description": {"$ref": "#/$defs/nullableString"},
     "published_at": {"type": "string", "format": "date-time"},
     "revised_at": {"type": ["string", "null"], "format": "date-time"},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "parser_version": {"$ref": "#/$defs/nonEmptyString"},
     "cve_ids": {
       "type": "array",
-      "items": {"type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"},
-      "uniqueItems": true
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/cveId"}
     },
-    "kb_ids": {
+    "package_ids": {
       "type": "array",
-      "items": {"type": "string", "pattern": "^KB[0-9]{6,8}$"},
-      "uniqueItems": true
+      "items": {"$ref": "#/$defs/packageId"}
     },
-    "vendor_severity": {"type": ["string", "null"], "minLength": 1},
+    "references": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "format": "uri"}
+    },
+    "vendor_severity": {
+      "type": "string",
+      "enum": ["none", "low", "medium", "high", "critical", "unknown"]
+    },
+    "cvss": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/cvssRecord"}
+    },
+    "update_category": {
+      "type": "string",
+      "enum": ["os", "driver", "firmware", "bios", "microcode", "application", "advisory", "other", "unknown"]
+    },
+    "reboot_requirement": {
+      "type": "string",
+      "enum": ["required", "maybe", "no", "unknown"]
+    },
+    "known_exploited": {
+      "$ref": "#/$defs/triState",
+      "description": "Must stay tri-state. Absence of exploitation evidence is unknown, never false."
+    },
+    "exploitability": {
+      "type": "string",
+      "enum": ["none", "low", "high", "unknown"]
+    },
     "affected_products": {
       "type": "array",
       "items": {"$ref": "#/$defs/affectedProduct"}
     },
-    "fixed_versions": {
+    "remediations": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1},
-      "uniqueItems": true
-    },
-    "reboot_required": {"type": ["boolean", "null"]},
-    "known_issues": {
-      "type": "array",
-      "items": {"type": "string", "minLength": 1},
-      "uniqueItems": true
+      "items": {"$ref": "#/$defs/remediation"}
     },
     "prerequisites": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1},
-      "uniqueItems": true
+      "items": {"$ref": "#/$defs/nonEmptyString"}
     },
-    "workarounds": {
+    "supersedes": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1},
-      "uniqueItems": true
+      "items": {"$ref": "#/$defs/nonEmptyString"}
     },
-    "references": {
+    "superseded_by": {
       "type": "array",
-      "items": {"type": "string", "format": "uri"},
-      "uniqueItems": true
+      "items": {"$ref": "#/$defs/nonEmptyString"}
     },
-    "raw_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-    "collected_at": {"type": "string", "format": "date-time"},
-    "parser_version": {"type": "string", "minLength": 1}
+    "known_issues": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "vendor_recommendation": {"$ref": "#/$defs/nullableString"},
+    "completeness": {
+      "type": "string",
+      "enum": ["complete", "partial", "unknown"]
+    },
+    "incomplete_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "normalization_confidence": {"$ref": "#/$defs/confidence"},
+    "conflicts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/conflict"}
+    },
+    "field_provenance": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/fieldProvenance"}
+    },
+    "provenance": {"$ref": "#/$defs/provenance"}
   }
 }

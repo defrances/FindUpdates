@@ -33,7 +33,7 @@ Vendor/intelligence sources
 
 ## Trust model
 
-External advisory text and vendor payloads are untrusted input. They may influence normalized facts only through validated parsers and may never be treated as executable instructions.
+External advisory text and vendor payloads are untrusted input. They may influence normalized facts only through validated parsers and may never be treated as executable instructions. Normalized advisories use the versioned `UpdateAdvisory` schema. Unknown reboot, exploitation and product-status values stay unknown; they are never coerced to negative assertions. Collector network/source failure is an outage, not an empty “no updates” catalog. Detail URLs are constructed on the fixed MSRC host; source-supplied `CvrfUrl` values are not followed.
 
 AI output is advisory evidence, not an authorization signal. Applicability, risk score, hard gates, approvals and target scope must remain deterministic and independently auditable.
 

@@ -12,7 +12,7 @@ Microsoft's OpenAPI contract advertises JSON and XML representations. In practic
 
 - Responses are bounded to 25 MiB.
 - HTTP 429 and selected 5xx responses are retried with bounded backoff and `Retry-After` support.
-- Transport failures are distinct from a legitimate empty result.
+- Transport failures are distinct from a legitimate empty result. If every selected document fetch fails, collection raises instead of returning an empty catalog.
 - A malformed detail document is isolated to its update ID; other documents continue processing.
 - XML containing DTD/entity declarations is rejected before parsing.
 - Every normalized record stores a SHA-256 hash of the raw source payload plus parser version and collection timestamp.
@@ -21,6 +21,6 @@ Microsoft's OpenAPI contract advertises JSON and XML representations. In practic
 
 ## Normalization boundary
 
-A monthly CVRF document is normalized into one `UpdateAdvisory` per vulnerability. Each record preserves its parent MSRC document ID, CVE and KB identifiers, affected MSRC product IDs, source references, revision timestamp and raw payload hash. This granularity allows later applicability and risk stages to reason about vulnerabilities independently.
+A monthly CVRF document is normalized into one `UpdateAdvisory` per vulnerability using the canonical v1 schema (`reboot_requirement`, `known_exploited` and product-status are enumerations with explicit `unknown`). Each record preserves CVE and KB identifiers, affected MSRC product IDs/CPE/builds, source references, revision timestamp and raw payload hash. Missing reboot or exploitation facts stay unknown; they are never stored as boolean `false`.
 
 This collector does not deploy updates, assign the authoritative project risk score, or call an AI model.

@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "advisory_id": "advisory_placeholder",
+  "vendor": "intel",
+  "source": "intel-csaf",
+  "vendor_advisory_id": "INTEL-SA-01234",
+  "title": "Intel Processor Microcode Update Advisory",
+  "description": "Synthetic Intel CSAF-style fixture. Vulnerability intelligence only; not an OEM-qualified firmware package.",
+  "published_at": "2026-08-12T00:00:00Z",
+  "revised_at": "2026-08-19T00:00:00Z",
+  "collected_at": "2026-09-15T12:00:00Z",
+  "parser_version": "1.0",
+  "cve_ids": ["CVE-2026-22222"],
+  "package_ids": [{"kind": "microcode", "value": "mcu-0x00000012"}],
+  "references": [
+    "https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-01234.html"
+  ],
+  "vendor_severity": "medium",
+  "cvss": [
+    {
+      "version": "3.1",
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:C/C:H/I:N/A:N",
+      "base_score": 5.3,
+      "source": "intel"
+    }
+  ],
+  "update_category": "microcode",
+  "reboot_requirement": "unknown",
+  "known_exploited": "unknown",
+  "exploitability": "low",
+  "affected_products": [
+    {
+      "vendor": "intel",
+      "product": "Core i7-1185G7",
+      "version_range": "microcode < 0x00000012",
+      "builds": [],
+      "architectures": ["x64"],
+      "vendor_product_id": "intel-core-i7-1185g7",
+      "cpe": "cpe:2.3:h:intel:core_i7-1185g7:-:*:*:*:*:*:*:*",
+      "status": "affected"
+    }
+  ],
+  "remediations": [
+    {
+      "kind": "vendor_fix",
+      "description": "Apply OEM-qualified microcode/BIOS that includes Intel MCU 0x00000012.",
+      "fixed_version": "0x00000012",
+      "package_id": {"kind": "microcode", "value": "mcu-0x00000012"}
+    }
+  ],
+  "prerequisites": [],
+  "supersedes": [],
+  "superseded_by": [],
+  "known_issues": [],
+  "vendor_recommendation": "Do not install generic Intel firmware on a medical device without OEM qualification.",
+  "completeness": "partial",
+  "incomplete_fields": ["reboot_requirement", "known_exploited"],
+  "normalization_confidence": "medium",
+  "conflicts": [],
+  "field_provenance": [
+    {"field_path": "affected_products", "source": "intel-csaf"},
+    {"field_path": "cvss", "source": "intel-csaf"}
+  ],
+  "provenance": {
+    "source_url": "https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-01234.html",
+    "raw_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "retrieved_at": "2026-09-15T12:00:00Z",
+    "content_type": "application/json"
+  }
+}

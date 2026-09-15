@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cvrfdoc xmlns="http://www.icasi.org/CVRF/schema/cvrf/1.1" xmlns:prod="http://www.icasi.org/CVRF/schema/prod/1.1" xmlns:vuln="http://www.icasi.org/CVRF/schema/vuln/1.1">
   <DocumentTitle>September 2026 Security Updates</DocumentTitle>
+  <DocumentTracking>
+    <Identification>
+      <ID>2026-Sep</ID>
+    </Identification>
+    <InitialReleaseDate>2026-09-09T07:00:00Z</InitialReleaseDate>
+    <CurrentReleaseDate>2026-09-09T07:00:00Z</CurrentReleaseDate>
+  </DocumentTracking>
   <prod:ProductTree>
     <prod:Branch Type="Vendor" Name="Microsoft">
       <prod:FullProductName ProductID="win11-24h2-x64">Windows 11 Version 24H2 for x64-based Systems</prod:FullProductName>

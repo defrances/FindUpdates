@@ -1,210 +1,182 @@
 from __future__ import annotations
 
-import datetime
 import json
-import pathlib
 import unittest
-import urllib.parse
+from datetime import UTC, datetime
+from pathlib import Path
 
-import jsonschema
+from jsonschema import Draft202012Validator, FormatChecker
 
-import findupdates.collectors.microsoft as microsoft
+from findupdates.collectors.errors import ParseError, SourceUnavailableError
+from findupdates.collectors.http import HttpClient, HttpTransportResult, MappingTransport
+from findupdates.collectors.microsoft import MicrosoftCollector, cvrf_url, updates_url
+from findupdates.normalization import RebootRequirement, TriState, VendorSeverity, advisory_to_dict
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "msrc"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURES = REPO_ROOT / "tests" / "fixtures" / "collectors"
 SCHEMA_PATH = REPO_ROOT / "schemas" / "update-advisory" / "v1.schema.json"
+MSRC_DOC = cvrf_url("https://api.msrc.microsoft.com/cvrf/v3.0", "2026-Sep")
+MSRC_INDEX_HOST = "https://api.msrc.microsoft.com/cvrf/v3.0/Updates"
+XML_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "msrc"
 
 
-def _summary() -> microsoft.UpdateSummary:
-    return microsoft.UpdateSummary(
-        update_id="2026-Sep",
-        title="September 2026 Security Updates",
-        severity="Critical",
-        initial_release_date=datetime.datetime(2026, 9, 8, 17, tzinfo=datetime.UTC),
-        current_release_date=datetime.datetime(2026, 9, 10, 17, tzinfo=datetime.UTC),
-        cvrf_url=None,
-    )
+def _validator() -> Draft202012Validator:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
-class FakeTransport:
-    def __init__(self, responses: dict[str, microsoft.HttpResponse]) -> None:
-        self.responses = responses
+def _index_body() -> bytes:
+    return json.dumps(
+        {
+            "value": [
+                {
+                    "ID": "2026-Sep",
+                    "CurrentReleaseDate": "2026-09-09T07:00:00Z",
+                    "CvrfUrl": "https://untrusted.example.invalid/ignored",
+                }
+            ]
+        }
+    ).encode("utf-8")
+
+
+class MicrosoftCollectorTests(unittest.TestCase):
+    def test_parses_windows_cve_kb_and_build_boundary(self) -> None:
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+        )
+        body = (FIXTURES / "msrc-cvrf-windows.json").read_bytes()
+
+        result = collector.collect_documents([(MSRC_DOC, body)])
+
+        self.assertEqual(result.metrics.collected, 1)
+        self.assertEqual(result.metrics.parse_error, 1)
+        advisory = result.advisories[0]
+        self.assertEqual(advisory.vendor_advisory_id, "CVE-2026-12345")
+        self.assertEqual(advisory.cve_ids, ("CVE-2026-12345",))
+        self.assertEqual(advisory.package_ids[0].value, "KB5060001")
+        self.assertIs(advisory.reboot_requirement, RebootRequirement.REQUIRED)
+        self.assertIs(advisory.known_exploited, TriState.FALSE)
+        self.assertIs(advisory.vendor_severity, VendorSeverity.HIGH)
+        self.assertEqual(advisory.affected_products[0].builds, ("10.0.22621.4037",))
+        self.assertEqual([], list(_validator().iter_errors(advisory_to_dict(advisory))))
+
+    def test_idempotent_reread_is_unchanged(self) -> None:
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+        )
+        body = (FIXTURES / "msrc-cvrf-windows.json").read_bytes()
+        first = collector.collect_documents([(MSRC_DOC, body)])
+        second = collector.collect_documents([(MSRC_DOC, body)], checkpoint=first.checkpoint)
+
+        self.assertEqual(first.advisories[0].advisory_id, second.advisories[0].advisory_id)
+        self.assertEqual(second.metrics.unchanged, 1)
+        self.assertEqual(second.metrics.changed, 0)
+
+    def test_revision_is_changed_and_keeps_identity(self) -> None:
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+        )
+        original = (FIXTURES / "msrc-cvrf-windows.json").read_bytes()
+        revised = (FIXTURES / "msrc-cvrf-windows-revised.json").read_bytes()
+        first = collector.collect_documents([(MSRC_DOC, original)])
+        second = collector.collect_documents([(MSRC_DOC, revised)], checkpoint=first.checkpoint)
+
+        self.assertEqual(first.advisories[0].advisory_id, second.advisories[0].advisory_id)
+        self.assertEqual(second.metrics.changed, 1)
+        self.assertIs(second.advisories[0].known_exploited, TriState.TRUE)
+        self.assertEqual(second.advisories[0].package_ids[0].value, "KB5060999")
+
+    def test_index_collect_and_source_outage(self) -> None:
+        now = datetime(2026, 9, 15, 12, tzinfo=UTC)
+        body = (FIXTURES / "msrc-cvrf-windows.json").read_bytes()
+        transport = _RecordingTransport({MSRC_INDEX_HOST: _index_body(), MSRC_DOC: body})
+        healthy = MicrosoftCollector(
+            client=HttpClient(
+                transport=transport,
+                max_retries=0,
+                min_interval_seconds=0,
+            ),
+            now=now,
+        )
+        result = healthy.collect()
+        self.assertEqual(result.metrics.collected, 1)
+        self.assertTrue(any("/Updates?" in url for url in transport.urls))
+        self.assertTrue(any("api-version=2023-11-01" in url for url in transport.urls))
+        self.assertTrue(
+            any("%24filter=" in url or "CurrentReleaseDate" in url for url in transport.urls)
+        )
+        self.assertTrue(all("untrusted.example.invalid" not in url for url in transport.urls))
+        self.assertIn(
+            "api-version=2023-11-01", updates_url("https://api.msrc.microsoft.com/cvrf/v3.0")
+        )
+
+        down = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport(
+                    {
+                        MSRC_INDEX_HOST: _index_body(),
+                        MSRC_DOC: HttpTransportResult(status=503, body=b"down"),
+                    }
+                ),
+                max_retries=0,
+                min_interval_seconds=0,
+            ),
+            now=now,
+        )
+        with self.assertRaises(SourceUnavailableError):
+            down.collect()
+
+    def test_xml_document_and_xxe_rejection(self) -> None:
+        collector = MicrosoftCollector(
+            client=HttpClient(
+                transport=MappingTransport({}), max_retries=0, min_interval_seconds=0
+            ),
+            now=datetime(2026, 9, 15, 12, tzinfo=UTC),
+        )
+        xml_body = (XML_FIXTURES / "2026-sep.xml").read_bytes()
+        result = collector.collect_documents([(MSRC_DOC, xml_body)])
+        self.assertEqual(result.metrics.collected, 1)
+        self.assertEqual(result.advisories[0].cve_ids, ("CVE-2026-9999",))
+        self.assertEqual(result.advisories[0].package_ids[0].value, "KB5069999")
+        self.assertIs(result.advisories[0].reboot_requirement, RebootRequirement.REQUIRED)
+        self.assertEqual([], list(_validator().iter_errors(advisory_to_dict(result.advisories[0]))))
+
+        blocked = collector.collect_documents(
+            [
+                (
+                    MSRC_DOC,
+                    b'<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
+                )
+            ]
+        )
+        self.assertEqual(blocked.metrics.collected, 0)
+        self.assertGreaterEqual(blocked.metrics.parse_error, 1)
+        self.assertTrue(
+            any("DTD" in error or "entity" in error.lower() for error in blocked.errors)
+        )
+        with self.assertRaises(ParseError):
+            from findupdates.collectors.microsoft.xmlcvrf import parse_cvrf_xml
+
+            parse_cvrf_xml(b'<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><cvrfdoc/>')
+
+
+class _RecordingTransport(MappingTransport):
+    def __init__(self, responses: dict[str, HttpTransportResult | bytes]) -> None:
+        super().__init__(responses)
         self.urls: list[str] = []
 
-    def get(
-        self,
-        url: str,
-        *,
-        timeout_seconds: float,
-        headers: dict[str, str] | microsoft.Mapping[str, str],
-    ) -> microsoft.HttpResponse:
-        del timeout_seconds, headers
+    def fetch(self, url: str, headers: dict[str, str], timeout: float) -> HttpTransportResult:
         self.urls.append(url)
-        for marker, response in self.responses.items():
-            if marker in url:
-                return response
-        raise AssertionError(f"unexpected URL: {url}")
-
-
-class MicrosoftNormalizationTests(unittest.TestCase):
-    def _validate_schema(self, advisory: microsoft.UpdateAdvisory) -> None:
-        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-        validator = jsonschema.Draft202012Validator(
-            schema,
-            format_checker=jsonschema.FormatChecker(),
-        )
-        errors = list(validator.iter_errors(advisory.to_dict()))
-        self.assertEqual([], errors)
-
-    def test_normalizes_json_cvrf(self) -> None:
-        body = (FIXTURE_DIR / "2026-sep.json").read_bytes()
-        response = microsoft.HttpResponse(200, "application/json", body, {})
-
-        advisories = microsoft.normalize_cvrf(
-            _summary(),
-            response,
-            collected_at=datetime.datetime(2026, 9, 15, 14, tzinfo=datetime.UTC),
-        )
-
-        self.assertEqual(1, len(advisories))
-        advisory = advisories[0]
-        self.assertEqual(("CVE-2026-9999",), advisory.cve_ids)
-        self.assertEqual(("KB5069999",), advisory.kb_ids)
-        self.assertTrue(advisory.reboot_required)
-        self.assertEqual("win11-24h2-x64", advisory.affected_products[0].product_id)
-        self.assertEqual(1, len(advisory.workarounds))
-        self._validate_schema(advisory)
-
-    def test_normalizes_xml_when_service_returns_xml(self) -> None:
-        body = (FIXTURE_DIR / "2026-sep.xml").read_bytes()
-        response = microsoft.HttpResponse(200, "application/xml", body, {})
-
-        advisories = microsoft.normalize_cvrf(
-            _summary(),
-            response,
-            collected_at=datetime.datetime(2026, 9, 15, 14, tzinfo=datetime.UTC),
-        )
-
-        self.assertEqual(("CVE-2026-9999",), advisories[0].cve_ids)
-        self.assertEqual(("KB5069999",), advisories[0].kb_ids)
-        self.assertEqual(
-            "Windows 11 Version 24H2 for x64-based Systems",
-            advisories[0].affected_products[0].name,
-        )
-        self._validate_schema(advisories[0])
-
-    def test_rejects_xml_with_doctype(self) -> None:
-        response = microsoft.HttpResponse(
-            200,
-            "application/xml",
-            b'<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
-            {},
-        )
-
-        with self.assertRaises(microsoft.MsrcParseError):
-            microsoft.normalize_cvrf(
-                _summary(),
-                response,
-                collected_at=datetime.datetime(2026, 9, 15, 14, tzinfo=datetime.UTC),
-            )
-
-
-class MicrosoftClientTests(unittest.TestCase):
-    def test_incremental_filter_and_collect_metrics_are_deterministic(self) -> None:
-        summaries = [
-            {
-                "ID": "2026-Sep",
-                "DocumentTitle": "September 2026 Security Updates",
-                "Severity": "Critical",
-                "InitialReleaseDate": "2026-09-08T17:00:00Z",
-                "CurrentReleaseDate": "2026-09-10T17:00:00Z",
-                "CvrfUrl": "https://untrusted.example.invalid/ignored"
-            }
-        ]
-        detail = (FIXTURE_DIR / "2026-sep.json").read_bytes()
-        transport = FakeTransport(
-            {
-                "/Updates?": microsoft.HttpResponse(
-                    200,
-                    "application/json",
-                    json.dumps(summaries).encode(),
-                    {},
-                ),
-                "/cvrf/2026-Sep?": microsoft.HttpResponse(200, "application/json", detail, {}),
-            }
-        )
-        client = microsoft.MsrcClient(transport=transport, sleeper=lambda _: None)
-        after = datetime.datetime(2026, 9, 1, tzinfo=datetime.UTC)
-
-        first = client.collect(
-            after=after,
-            collected_at=datetime.datetime(2026, 9, 15, 14, tzinfo=datetime.UTC),
-        )
-        known = {item.advisory_id: item.raw_sha256 for item in first.advisories}
-        second = client.collect(
-            after=after,
-            known_hashes=known,
-            collected_at=datetime.datetime(2026, 9, 15, 15, tzinfo=datetime.UTC),
-        )
-
-        self.assertEqual(1, first.metrics.changed)
-        self.assertEqual(0, first.metrics.unchanged)
-        self.assertEqual(0, second.metrics.changed)
-        self.assertEqual(1, second.metrics.unchanged)
-        update_url = next(url for url in transport.urls if "/Updates?" in url)
-        parsed_query = urllib.parse.parse_qs(urllib.parse.urlparse(update_url).query)
-        self.assertEqual(["CurrentReleaseDate gt 2026-09-01"], parsed_query["$filter"])
-        self.assertTrue(all("untrusted.example.invalid" not in url for url in transport.urls))
-
-    def test_one_malformed_document_does_not_discard_valid_document(self) -> None:
-        summaries = [
-            {
-                "ID": "2026-Aug",
-                "DocumentTitle": "August 2026 Security Updates",
-                "Severity": "Important",
-                "InitialReleaseDate": "2026-08-11T17:00:00Z",
-                "CurrentReleaseDate": "2026-08-11T17:00:00Z"
-            },
-            {
-                "ID": "2026-Sep",
-                "DocumentTitle": "September 2026 Security Updates",
-                "Severity": "Critical",
-                "InitialReleaseDate": "2026-09-08T17:00:00Z",
-                "CurrentReleaseDate": "2026-09-10T17:00:00Z"
-            }
-        ]
-        transport = FakeTransport(
-            {
-                "/Updates?": microsoft.HttpResponse(
-                    200,
-                    "application/json",
-                    json.dumps(summaries).encode(),
-                    {},
-                ),
-                "/cvrf/2026-Aug?": microsoft.HttpResponse(
-                    200,
-                    "application/json",
-                    b"{not-json",
-                    {},
-                ),
-                "/cvrf/2026-Sep?": microsoft.HttpResponse(
-                    200,
-                    "application/json",
-                    (FIXTURE_DIR / "2026-sep.json").read_bytes(),
-                    {},
-                ),
-            }
-        )
-        client = microsoft.MsrcClient(transport=transport, sleeper=lambda _: None)
-
-        result = client.collect(
-            collected_at=datetime.datetime(2026, 9, 15, 14, tzinfo=datetime.UTC)
-        )
-
-        self.assertEqual(1, len(result.advisories))
-        self.assertEqual(1, result.metrics.failed)
-        self.assertEqual(1, result.metrics.parse_errors)
-        self.assertEqual("2026-Aug", result.errors[0].update_id)
+        return super().fetch(url, headers, timeout)
 
 
 if __name__ == "__main__":

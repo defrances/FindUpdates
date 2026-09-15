@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "advisory_id": "advisory_placeholder",
+  "vendor": "microsoft",
+  "source": "msrc",
+  "vendor_advisory_id": "ADV260915",
+  "title": "Windows Kernel Elevation of Privilege Vulnerability",
+  "description": "Synthetic Microsoft advisory fixture. No production data.",
+  "published_at": "2026-09-08T17:00:00Z",
+  "revised_at": "2026-09-09T18:30:00Z",
+  "collected_at": "2026-09-15T12:00:00Z",
+  "parser_version": "1.0",
+  "cve_ids": ["CVE-2026-12345"],
+  "package_ids": [{"kind": "kb", "value": "KB5060001"}],
+  "references": [
+    "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-12345"
+  ],
+  "vendor_severity": "high",
+  "cvss": [
+    {
+      "version": "3.1",
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 7.8,
+      "source": "msrc"
+    }
+  ],
+  "update_category": "os",
+  "reboot_requirement": "maybe",
+  "known_exploited": "unknown",
+  "exploitability": "unknown",
+  "affected_products": [
+    {
+      "vendor": "microsoft",
+      "product": "Windows 11",
+      "version_range": ">=10.0.22621 <10.0.22631",
+      "builds": ["22621", "22631"],
+      "architectures": ["x64"],
+      "vendor_product_id": "windows_11",
+      "cpe": "cpe:2.3:o:microsoft:windows_11:-:*:*:*:*:*:x64:*",
+      "status": "affected"
+    }
+  ],
+  "remediations": [
+    {
+      "kind": "vendor_fix",
+      "description": "Install the September 2026 security update.",
+      "fixed_version": "10.0.22631.4037",
+      "package_id": {"kind": "kb", "value": "KB5060001"}
+    }
+  ],
+  "prerequisites": ["Servicing stack update KB5050000"],
+  "supersedes": ["KB5059999"],
+  "superseded_by": [],
+  "known_issues": ["Some devices may require a second reboot after servicing stack update."],
+  "vendor_recommendation": "Install after validating the servicing stack prerequisite.",
+  "completeness": "partial",
+  "incomplete_fields": ["known_exploited", "exploitability"],
+  "normalization_confidence": "medium",
+  "conflicts": [],
+  "field_provenance": [
+    {"field_path": "cve_ids", "source": "msrc"},
+    {"field_path": "package_ids", "source": "msrc"},
+    {"field_path": "reboot_requirement", "source": "msrc"}
+  ],
+  "provenance": {
+    "source_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-12345",
+    "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "retrieved_at": "2026-09-15T12:00:00Z",
+    "content_type": "application/json"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "DocumentTitle": {"Value": "September 2026 Security Updates"},
+  "DocumentTracking": {
+    "Identification": {"ID": {"Value": "2026-Sep"}},
+    "InitialReleaseDate": "2026-09-08T07:00:00Z",
+    "CurrentReleaseDate": "2026-09-09T07:00:00Z"
+  },
+  "ProductTree": {
+    "FullProductName": [
+      {
+        "ProductID": "11571",
+        "CPE": "cpe:2.3:o:microsoft:windows_11:10.0.22621.4037:*:*:*:*:*:x64:*",
+        "Value": "Windows 11 Version 22H2 for x64-based Systems"
+      },
+      {
+        "ProductID": "11900",
+        "CPE": "cpe:2.3:o:microsoft:windows_11:10.0.22631.4037:*:*:*:*:*:x64:*",
+        "Value": "Windows 11 Version 23H2 for x64-based Systems"
+      }
+    ]
+  },
+  "Vulnerability": [
+    {
+      "CVE": "CVE-2026-12345",
+      "Ordinal": "1",
+      "Title": {"Value": "Windows Kernel Elevation of Privilege Vulnerability"},
+      "Notes": [
+        {
+          "Title": "Description",
+          "Type": 2,
+          "Value": "<p>Synthetic Windows kernel advisory fixture. No production data.</p>"
+        }
+      ],
+      "ProductStatuses": [{"ProductID": ["11571", "11900"], "Type": 3}],
+      "CVSSScoreSets": [
+        {
+          "BaseScore": 7.8,
+          "Vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+          "ProductID": ["11571"]
+        }
+      ],
+      "Threats": [
+        {
+          "Type": 3,
+          "Description": {"Value": "Important"},
+          "ProductID": ["11571"]
+        },
+        {
+          "Type": 1,
+          "Description": {"Value": "Publicly Disclosed:No;Exploited:No;Latest Software Release:Exploitation Less Likely"}
+        }
+      ],
+      "Remediations": [
+        {
+          "Type": 2,
+          "Description": {"Value": "5060001"},
+          "URL": "https://support.microsoft.com/help/5060001",
+          "Supercedence": "5059999",
+          "ProductID": ["11571", "11900"],
+          "RestartRequired": {"Value": "Yes"},
+          "SubType": "Security Update",
+          "FixedBuild": "10.0.22621.4037"
+        }
+      ]
+    },
+    {
+      "CVE": "not-a-cve",
+      "Ordinal": "2",
+      "Title": {"Value": "Malformed synthetic vulnerability"}
+    }
+  ]
+}
