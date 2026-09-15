@@ -13,6 +13,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from findupdates.agents import analysis_to_dict, analyze
+from findupdates.agents.models import AgentAnalysis
+from findupdates.agents.provider import AgentProvider
 from findupdates.applicability import evaluate
 from findupdates.applicability.models import ApplicabilityResult
 from findupdates.changerecords import (
@@ -71,6 +74,8 @@ class AssessOptions:
     skip_notify: bool = False
     notifications: NotificationService | None = None
     webhook_transport: WebhookTransport | None = None
+    skip_ai: bool = False
+    analysis_provider: AgentProvider | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +92,8 @@ class AssessedChange:
     issue_number: int | None
     notified: bool | None
     notification_suppressed: bool | None
+    analyzed: bool | None
+    analysis_fallback: bool | None
 
 
 @dataclass
@@ -168,6 +175,8 @@ def write_summary(run: AssessRun, output_dir: Path) -> Path:
                 "issue_number": item.issue_number,
                 "notified": item.notified,
                 "notification_suppressed": item.notification_suppressed,
+                "analyzed": item.analyzed,
+                "analysis_fallback": item.analysis_fallback,
             }
             for item in run.changes
         ],
@@ -202,6 +211,23 @@ def write_enrichment(output_dir: Path, records: tuple[CveEnrichment, ...]) -> No
         if "token" in payload:
             raise AssessError("refusing to write enrichment JSON that contains a token field")
         path = folder / f"{record.cve_id}.json"
+        path.write_text(
+            json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+
+def write_analysis(output_dir: Path, analyses: tuple[AgentAnalysis, ...]) -> None:
+    """Write bounded AI analysis artifacts. Token fields are refused."""
+    if not analyses:
+        return
+    folder = output_dir / "analysis"
+    folder.mkdir(parents=True, exist_ok=True)
+    for analysis in analyses:
+        payload = analysis_to_dict(analysis)
+        if "token" in payload:
+            raise AssessError("refusing to write analysis JSON that contains a token field")
+        path = folder / f"{analysis.analysis_id}.json"
         path.write_text(
             json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -255,6 +281,15 @@ def _assess_all(
                 assess_risk(advisory, device, app, now=now)
                 for device, app in zip(members, apps, strict=True)
             )
+            analyses = _analyze_group(
+                advisory,
+                tuple(members),
+                apps,
+                risks,
+                options,
+                now,
+            )
+            policy_before = tuple(item.policy_result.value for item in risks)
             record = build_change_record(
                 advisory,
                 tuple(members),
@@ -262,12 +297,19 @@ def _assess_all(
                 risks,
                 now=now,
             )
+            if tuple(item.policy_result.value for item in risks) != policy_before:
+                raise AssessError("analysis rewrote policy_result")
+            if analyses and any(
+                item.authoritative.policy_result != record.policy_result for item in analyses
+            ):
+                raise AssessError("analysis authoritative snapshot diverged from policy_result")
             upsert: UpsertResult | None = None
             if store is not None:
                 upsert = store.upsert(record)
                 record = upsert.record
             if options.output_dir is not None:
                 write_record(options.output_dir, record)
+                write_analysis(options.output_dir, analyses)
             notice = _notify(
                 notifications,
                 advisory,
@@ -285,6 +327,7 @@ def _assess_all(
                 f"policy={record.policy_result} key={record.idempotency_key} "
                 f"known_exploited={advisory.known_exploited.value}"
                 f"{_notify_note(notice)}"
+                f"{_ai_note(analyses)}"
             )
             rows.append(
                 AssessedChange(
@@ -300,6 +343,10 @@ def _assess_all(
                     issue_number=None if upsert is None else upsert.issue_number,
                     notified=None if notice is None else not notice.suppressed,
                     notification_suppressed=None if notice is None else notice.suppressed,
+                    analyzed=None if not analyses else True,
+                    analysis_fallback=None
+                    if not analyses
+                    else any(item.used_fallback for item in analyses),
                 )
             )
     return tuple(rows), notes
@@ -338,6 +385,41 @@ def _notification_service(options: AssessOptions) -> NotificationService | None:
                 transport=options.webhook_transport,
             )
     return NotificationService(channels)
+
+
+def _analyze_group(
+    advisory: UpdateAdvisory,
+    devices: tuple[DeviceInventory, ...],
+    apps: tuple[ApplicabilityResult, ...],
+    risks: tuple[RiskAssessment, ...],
+    options: AssessOptions,
+    now: datetime,
+) -> tuple[AgentAnalysis, ...]:
+    if options.skip_ai:
+        return ()
+    settings = options.settings or Settings.from_env()
+    rows: list[AgentAnalysis] = []
+    for device, app, risk in zip(devices, apps, risks, strict=True):
+        rows.append(
+            analyze(
+                advisory,
+                device,
+                app,
+                risk,
+                now=now,
+                provider=options.analysis_provider,
+                settings=settings,
+            )
+        )
+    return tuple(rows)
+
+
+def _ai_note(analyses: tuple[AgentAnalysis, ...]) -> str:
+    if not analyses:
+        return ""
+    if any(item.used_fallback for item in analyses):
+        return " ai=fallback"
+    return " ai=emitted"
 
 
 def _notify(

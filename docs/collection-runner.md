@@ -37,6 +37,8 @@ Environment:
 
 Polling does not create GitHub change records, run applicability/risk, or talk to
 Intune/OEM backends. Use `python -m findupdates.pipeline assess` (#56) to turn
-collector JSON plus inventory into change records. The MVP e2e path in #34 remains
-fixture-driven. GitHub Actions `collect.yml` runs `--dry-run` only so pull-request
-CI never depends on live vendor HTTP.
+collector JSON plus inventory into change records. `python -m findupdates.pipeline detect`
+(#63) can stage fixtures or live collector output, then run bounded AI and
+notifications. The MVP e2e path in #34 remains fixture-driven. GitHub Actions
+`collect.yml` runs `--dry-run` only so pull-request CI never depends on live
+vendor HTTP. `detect.yml` is schedule/`workflow_dispatch` only (no `pull_request`).

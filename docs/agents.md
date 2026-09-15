@@ -37,3 +37,8 @@ There is no tool interface. A provider may only return a JSON object.
 - Invalid or empty model output falls back to the template.
 
 The default runtime setting is `FINDUPDATES_AI_ENABLED=false`.
+
+Issue #63 wires this layer into `python -m findupdates.pipeline assess` after
+risk (unless `--skip-ai`) and into `python -m findupdates.pipeline detect` for
+GitHub Actions. Detect forces the offline provider so Actions need no model
+keys. Analysis artifacts never authorize deployment.

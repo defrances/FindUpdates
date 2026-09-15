@@ -9,8 +9,10 @@ from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlencode
 
+from findupdates.agents import OfflineProvider
 from findupdates.changerecords import MemoryChangeStore
 from findupdates.collectors.http import HttpClient, HttpTransportResult, MappingTransport
+from findupdates.config import Settings
 from findupdates.enrichment import DEFAULT_KEV_URL, DEFAULT_NVD_URL, EnrichmentService
 from findupdates.enrichment.kev import KevClient
 from findupdates.enrichment.nvd import NvdClient
@@ -67,6 +69,7 @@ class PipelineAssessTests(unittest.TestCase):
                     store=store,
                     skip_enrichment=True,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -93,6 +96,7 @@ class PipelineAssessTests(unittest.TestCase):
                 store=store,
                 skip_enrichment=True,
                 skip_notify=True,
+                skip_ai=True,
             )
             first = assess_collected(options, now=NOW)
             second = assess_collected(options, now=NOW)
@@ -112,6 +116,7 @@ class PipelineAssessTests(unittest.TestCase):
                     store=store,
                     skip_enrichment=True,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -137,6 +142,7 @@ class PipelineAssessTests(unittest.TestCase):
                     store=MemoryChangeStore(),
                     skip_enrichment=True,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -157,6 +163,7 @@ class PipelineAssessTests(unittest.TestCase):
                     store=MemoryChangeStore(),
                     skip_enrichment=True,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -174,6 +181,7 @@ class PipelineAssessTests(unittest.TestCase):
                     store=store,
                     skip_enrichment=True,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -220,6 +228,16 @@ class PipelineAssessTests(unittest.TestCase):
             payload = json.loads(notes[0].read_text(encoding="utf-8"))
             self.assertNotIn("token", payload)
             self.assertTrue(payload["acknowledgement_required"])
+            self.assertTrue(summary["changes"][0]["analyzed"])
+            self.assertTrue(summary["changes"][0]["analysis_fallback"])
+            analyses = list((out / "analysis").glob("*.json"))
+            self.assertEqual(len(analyses), 1)
+            analysis = json.loads(analyses[0].read_text(encoding="utf-8"))
+            self.assertNotIn("token", analysis)
+            self.assertEqual(
+                analysis["authoritative"]["policy_result"],
+                summary["changes"][0]["policy_result"],
+            )
 
 
 def _enrichment_service(*, kev_name: str | None = None, down: bool = False) -> EnrichmentService:
@@ -259,6 +277,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     store=baseline,
                     skip_enrichment=True,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -274,6 +293,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     store=listed,
                     enrichment=service,
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -295,6 +315,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     store=store,
                     enrichment=_enrichment_service(kev_name="kev-empty.json"),
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -312,6 +333,7 @@ class PipelineAssessEnrichmentTests(unittest.TestCase):
                     store=store,
                     enrichment=_enrichment_service(down=True),
                     skip_notify=True,
+                    skip_ai=True,
                 ),
                 now=NOW,
             )
@@ -339,6 +361,7 @@ class PipelineAssessNotifyTests(unittest.TestCase):
                     output_dir=out,
                     store=store,
                     skip_enrichment=True,
+                    skip_ai=True,
                     notifications=notifications,
                     environ={},
                 ),
@@ -376,6 +399,7 @@ class PipelineAssessNotifyTests(unittest.TestCase):
                 inventory=_write_inventory(root),
                 store=store,
                 skip_enrichment=True,
+                skip_ai=True,
                 notifications=notifications,
                 environ={},
             )
@@ -410,6 +434,7 @@ class PipelineAssessNotifyTests(unittest.TestCase):
                     "--dry-run",
                     "--skip-enrichment",
                     "--skip-notify",
+                    "--skip-ai",
                 ],
                 environ={},
             )
@@ -417,7 +442,9 @@ class PipelineAssessNotifyTests(unittest.TestCase):
             summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
             self.assertIsNone(summary["changes"][0]["notified"])
             self.assertIsNone(summary["changes"][0]["notification_suppressed"])
+            self.assertIsNone(summary["changes"][0]["analyzed"])
             self.assertFalse((out / "notifications").exists())
+            self.assertFalse((out / "analysis").exists())
 
     def test_webhook_503_does_not_abort_or_rewrite_policy(self) -> None:
         store = MemoryChangeStore()
@@ -432,6 +459,7 @@ class PipelineAssessNotifyTests(unittest.TestCase):
                     output_dir=out,
                     store=store,
                     skip_enrichment=True,
+                    skip_ai=True,
                     webhook_transport=transport,
                     environ={"FINDUPDATES_NOTIFICATION_WEBHOOK_URL": WEBHOOK_URL},
                 ),
@@ -451,6 +479,66 @@ class PipelineAssessNotifyTests(unittest.TestCase):
         self.assertIsNotNone(stored)
         assert stored is not None
         self.assertEqual(stored.policy_result, PolicyResult.REQUIRE_APPROVAL.value)
+
+
+class PipelineAssessAiTests(unittest.TestCase):
+    def test_microsoft_analysis_matches_policy_and_has_no_token(self) -> None:
+        store = MemoryChangeStore()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            out = root / "out"
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, microsoft_advisory()),
+                    inventory=_write_inventory(root),
+                    output_dir=out,
+                    store=store,
+                    skip_enrichment=True,
+                    skip_notify=True,
+                    analysis_provider=OfflineProvider(),
+                    settings=Settings(ai_enabled=True, ai_provider="offline"),
+                    environ={},
+                ),
+                now=NOW,
+            )
+            files = list((out / "analysis").glob("*.json"))
+            payload = json.loads(files[0].read_text(encoding="utf-8"))
+        self.assertEqual(run.exit_code, 0)
+        row = run.changes[0]
+        self.assertEqual(row.policy_result, PolicyResult.REQUIRE_APPROVAL.value)
+        self.assertTrue(row.analyzed)
+        self.assertFalse(row.analysis_fallback)
+        self.assertTrue(any("ai=emitted" in note for note in run.notes))
+        self.assertEqual(len(files), 1)
+        self.assertNotIn("token", payload)
+        self.assertEqual(payload["authoritative"]["policy_result"], row.policy_result)
+        self.assertEqual(payload["authoritative"]["risk_score"], row.risk_score)
+        stored = store.get(row.idempotency_key)
+        self.assertIsNotNone(stored)
+        assert stored is not None
+        self.assertEqual(stored.policy_result, row.policy_result)
+
+    def test_skip_ai_writes_no_analysis(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            out = root / "out"
+            run = assess_collected(
+                AssessOptions(
+                    advisories=_write_advisories(root, microsoft_advisory()),
+                    inventory=_write_inventory(root),
+                    output_dir=out,
+                    store=MemoryChangeStore(),
+                    skip_enrichment=True,
+                    skip_notify=True,
+                    skip_ai=True,
+                    environ={},
+                ),
+                now=NOW,
+            )
+        self.assertEqual(run.exit_code, 0)
+        self.assertIsNone(run.changes[0].analyzed)
+        self.assertFalse((out / "analysis").exists())
+        self.assertTrue(all("ai=" not in note for note in run.notes))
 
 
 if __name__ == "__main__":

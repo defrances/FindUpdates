@@ -13,6 +13,7 @@ python -m findupdates.pipeline assess --advisories .findupdates/out --inventory 
 python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --store github --repository owner/repo
 python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --output-dir .findupdates/changes --skip-enrichment
 python -m findupdates.pipeline assess --advisories .findupdates/out --inventory inventory.json --output-dir .findupdates/changes --dry-run --skip-notify
+python -m findupdates.pipeline detect --source fixtures --output-dir .findupdates/detect
 ```
 
 `--advisories` is the collector output directory from #52 (`msrc/*.json`,
@@ -46,6 +47,14 @@ the event model; this issue does not add an ack CLI. Notification JSON is
 written under `--output-dir/notifications/` when output-dir is set. Delivery
 failure is recorded; it does not abort assess or rewrite `policy_result`.
 
+Issue #63 runs bounded agentic analysis after risk unless `--skip-ai` is set.
+The offline/template provider is used on GitHub Actions; analysis JSON is
+written under `--output-dir/analysis/`. AI cannot change `policy_result`.
+`python -m findupdates.pipeline detect` stages fixtures or live collector
+output, then assess + AI + notify. GitHub Actions `detect.yml` publishes the
+markdown report as a Job Summary (the GitHub-side notification) and uploads
+artifacts. `collect.yml` stays `--dry-run` and is not a pull-request check.
+
 ## Fail-closed behavior
 
 - Unreadable or malformed advisory JSON exits non-zero and does not upsert.
@@ -57,9 +66,9 @@ failure is recorded; it does not abort assess or rewrite `policy_result`.
   HOLD/BLOCK.
 - An advisory that does not match with strong identity still produces a record.
   Unknown applicability is BLOCK; it is never a silent “no updates” skip.
-- Tokens are not written into advisory, inventory, change-record, or
-  notification JSON. Webhook URLs that embed a credential are not logged or
-  written into artifacts.
+- Tokens are not written into advisory, inventory, change-record,
+  notification, or analysis JSON. Webhook URLs that embed a credential are not
+  logged or written into artifacts.
 - NVD API keys are never sent to CISA.
 - A missing or failing webhook is a delivery failure, not an assess abort.
 
@@ -68,6 +77,7 @@ failure is recorded; it does not abort assess or rewrite `policy_result`.
 Assess does not poll vendors, run lab validation, or invoke a deployment
 adapter. It does not post live GitHub Issue comments, persist a cross-process
 notification log, or add an acknowledgement CLI. GitHub Actions `collect.yml`
-stays `--dry-run` only. Promotion still uses
+stays `--dry-run` only. `detect.yml` may poll vendors only on schedule or
+`workflow_dispatch` with `--source live`; it never deploys. Promotion still uses
 `python -m findupdates.changerecords.workflow` and still reads policy from the
 stored record.
