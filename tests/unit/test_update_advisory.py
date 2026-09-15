@@ -28,6 +28,7 @@ from findupdates.normalization import (
     VendorSeverity,
     advisory_to_dict,
     canonical_json,
+    dict_to_advisory,
     logical_advisory_key,
     merge_advisories,
     normalize_source_record,
@@ -147,6 +148,11 @@ class NormalizationTests(unittest.TestCase):
         advisory = normalize_source_record(self._microsoft_record())
         errors = list(_validator().iter_errors(advisory_to_dict(advisory)))
         self.assertEqual([], errors)
+
+    def test_advisory_json_round_trips(self) -> None:
+        advisory = normalize_source_record(self._microsoft_record())
+        restored = dict_to_advisory(advisory_to_dict(advisory))
+        self.assertEqual(advisory_to_dict(restored), advisory_to_dict(advisory))
 
     def _microsoft_record(self) -> NormalizedSourceRecord:
         return NormalizedSourceRecord(

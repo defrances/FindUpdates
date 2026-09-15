@@ -47,4 +47,6 @@ never stored on the change record or in Settings. The API host is fixed to
 
 CI and the MVP demo keep `MemoryChangeStore`. This adapter does not deploy updates.
 
-MVP handoff remains simulated/non-production.
+Issue #56 (`python -m findupdates.pipeline assess`) builds records from collector
+JSON plus inventory and upserts them through this store. MVP handoff in the
+`run_mvp` demo remains simulated/non-production.

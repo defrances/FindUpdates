@@ -14,7 +14,10 @@ Not production-ready: live collector polling against vendor networks from GitHub
 Actions (the #52 runner is dry-run there; operators poll locally), GitHub
 Environment reviewers, signed device agents, WORM evidence archive, hosted
 dashboards. Collector checkpoints and CLI exist; the MVP e2e path still uses
-on-disk fixtures rather than a live poll handoff.
+on-disk fixtures rather than a live poll. Issue #56 adds
+`python -m findupdates.pipeline assess` so collector JSON plus inventory can
+upsert change records without deploying; the MVP demo itself still uses
+in-memory fixtures.
 
 ## How to reproduce
 

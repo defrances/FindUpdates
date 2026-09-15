@@ -10,13 +10,26 @@ from typing import Any
 from findupdates.normalization.models import (
     SCHEMA_VERSION,
     AffectedProduct,
+    Architecture,
+    Completeness,
+    Confidence,
     Conflict,
     CvssRecord,
+    CvssVersion,
+    Exploitability,
     FieldProvenance,
     PackageId,
+    PackageKind,
+    ProductStatus,
     Provenance,
+    RebootRequirement,
     Remediation,
+    RemediationKind,
+    TriState,
     UpdateAdvisory,
+    UpdateCategory,
+    Vendor,
+    VendorSeverity,
 )
 
 
@@ -28,6 +41,57 @@ def canonical_json(advisory: UpdateAdvisory) -> str:
         indent=None,
         separators=(",", ":"),
         sort_keys=True,
+    )
+
+
+def dict_to_advisory(payload: dict[str, Any]) -> UpdateAdvisory:
+    """Parse collector/canonical advisory JSON. Unknown fields are ignored."""
+    provenance_raw = payload["provenance"]
+    if not isinstance(provenance_raw, dict):
+        raise ValueError("provenance must be an object")
+    return UpdateAdvisory(
+        advisory_id=str(payload["advisory_id"]),
+        vendor=Vendor(str(payload["vendor"])),
+        source=str(payload["source"]),
+        vendor_advisory_id=_optional_text(payload.get("vendor_advisory_id")),
+        title=str(payload["title"]),
+        description=_optional_text(payload.get("description")),
+        published_at=_parse_datetime(str(payload["published_at"])),
+        revised_at=_parse_optional_datetime(payload.get("revised_at")),
+        collected_at=_parse_datetime(str(payload["collected_at"])),
+        parser_version=str(payload["parser_version"]),
+        cve_ids=tuple(str(item) for item in payload.get("cve_ids", [])),
+        package_ids=tuple(_parse_package(item) for item in payload.get("package_ids", [])),
+        references=tuple(str(item) for item in payload.get("references", [])),
+        vendor_severity=VendorSeverity(str(payload["vendor_severity"])),
+        cvss=tuple(_parse_cvss(item) for item in payload.get("cvss", [])),
+        update_category=UpdateCategory(str(payload["update_category"])),
+        reboot_requirement=RebootRequirement(str(payload["reboot_requirement"])),
+        known_exploited=TriState(str(payload["known_exploited"])),
+        exploitability=Exploitability(str(payload["exploitability"])),
+        affected_products=tuple(
+            _parse_product(item) for item in payload.get("affected_products", [])
+        ),
+        remediations=tuple(_parse_remediation(item) for item in payload.get("remediations", [])),
+        prerequisites=tuple(str(item) for item in payload.get("prerequisites", [])),
+        supersedes=tuple(str(item) for item in payload.get("supersedes", [])),
+        superseded_by=tuple(str(item) for item in payload.get("superseded_by", [])),
+        known_issues=tuple(str(item) for item in payload.get("known_issues", [])),
+        vendor_recommendation=_optional_text(payload.get("vendor_recommendation")),
+        completeness=Completeness(str(payload["completeness"])),
+        incomplete_fields=tuple(str(item) for item in payload.get("incomplete_fields", [])),
+        normalization_confidence=Confidence(str(payload["normalization_confidence"])),
+        conflicts=tuple(_parse_conflict(item) for item in payload.get("conflicts", [])),
+        field_provenance=tuple(
+            _parse_field_provenance(item) for item in payload.get("field_provenance", [])
+        ),
+        provenance=Provenance(
+            source_url=_optional_text(provenance_raw.get("source_url")),
+            raw_sha256=str(provenance_raw["raw_sha256"]),
+            retrieved_at=_parse_datetime(str(provenance_raw["retrieved_at"])),
+            content_type=_optional_text(provenance_raw.get("content_type")),
+        ),
+        schema_version=str(payload.get("schema_version", SCHEMA_VERSION)),
     )
 
 
@@ -132,3 +196,83 @@ def _optional_datetime(value: datetime | None) -> str | None:
 
 def _enum(value: StrEnum) -> str:
     return value.value
+
+
+def _parse_package(item: object) -> PackageId:
+    if not isinstance(item, dict):
+        raise ValueError("package_id must be an object")
+    return PackageId(PackageKind(str(item["kind"])), str(item["value"]))
+
+
+def _parse_cvss(item: object) -> CvssRecord:
+    if not isinstance(item, dict):
+        raise ValueError("cvss record must be an object")
+    score = item.get("base_score")
+    if score is not None and not isinstance(score, int | float):
+        raise ValueError("cvss.base_score must be a number")
+    return CvssRecord(
+        version=CvssVersion(str(item["version"])),
+        vector=_optional_text(item.get("vector")),
+        base_score=None if score is None else float(score),
+        source=str(item["source"]),
+    )
+
+
+def _parse_product(item: object) -> AffectedProduct:
+    if not isinstance(item, dict):
+        raise ValueError("affected_product must be an object")
+    architectures = tuple(Architecture(str(value)) for value in item.get("architectures", []))
+    return AffectedProduct(
+        vendor=str(item["vendor"]),
+        product=str(item["product"]),
+        version_range=_optional_text(item.get("version_range")),
+        builds=tuple(str(value) for value in item.get("builds", [])),
+        architectures=architectures,
+        vendor_product_id=_optional_text(item.get("vendor_product_id")),
+        cpe=_optional_text(item.get("cpe")),
+        status=ProductStatus(str(item["status"])),
+    )
+
+
+def _parse_remediation(item: object) -> Remediation:
+    if not isinstance(item, dict):
+        raise ValueError("remediation must be an object")
+    package = item.get("package_id")
+    return Remediation(
+        kind=RemediationKind(str(item["kind"])),
+        description=_optional_text(item.get("description")),
+        fixed_version=_optional_text(item.get("fixed_version")),
+        package_id=None if package is None else _parse_package(package),
+    )
+
+
+def _parse_conflict(item: object) -> Conflict:
+    if not isinstance(item, dict):
+        raise ValueError("conflict must be an object")
+    return Conflict(str(item["field_path"]), str(item["reason"]))
+
+
+def _parse_field_provenance(item: object) -> FieldProvenance:
+    if not isinstance(item, dict):
+        raise ValueError("field_provenance must be an object")
+    return FieldProvenance(str(item["field_path"]), str(item["source"]))
+
+
+def _optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _parse_datetime(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("timestamps must be timezone-aware")
+    return parsed
+
+
+def _parse_optional_datetime(value: object) -> datetime | None:
+    if value is None:
+        return None
+    return _parse_datetime(str(value))

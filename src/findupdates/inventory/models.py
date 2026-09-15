@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from enum import StrEnum
 
@@ -160,6 +160,16 @@ class DeviceInventory:
         if self.freshness_state is FreshnessState.UNKNOWN:
             return False
         return self.freshness_state is self.evaluated_freshness()
+
+
+def refresh_for_assessment(device: DeviceInventory, now: datetime) -> DeviceInventory:
+    """Recompute freshness at assess time. A stale file cannot stay marked fresh."""
+    state = evaluate_freshness(
+        inventory_timestamp=device.inventory_timestamp,
+        evaluated_at=now,
+        max_age=timedelta(hours=device.freshness_max_age_hours),
+    )
+    return replace(device, freshness_state=state, freshness_evaluated_at=now)
 
 
 def evaluate_freshness(

@@ -36,6 +36,7 @@ Environment:
 ## What this issue does not do
 
 Polling does not create GitHub change records, run applicability/risk, or talk to
-Intune/OEM backends. The MVP e2e path in #34 remains fixture-driven until a later
-handoff issue. GitHub Actions `collect.yml` runs `--dry-run` only so pull-request
+Intune/OEM backends. Use `python -m findupdates.pipeline assess` (#56) to turn
+collector JSON plus inventory into change records. The MVP e2e path in #34 remains
+fixture-driven. GitHub Actions `collect.yml` runs `--dry-run` only so pull-request
 CI never depends on live vendor HTTP.

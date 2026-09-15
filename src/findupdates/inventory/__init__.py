@@ -13,6 +13,12 @@ from findupdates.inventory.models import (
     SoftwareKind,
     VerificationState,
     evaluate_freshness,
+    refresh_for_assessment,
+)
+from findupdates.inventory.serialize import (
+    device_to_dict,
+    dict_to_device,
+    load_inventory,
 )
 
 __all__ = [
@@ -27,5 +33,9 @@ __all__ = [
     "SoftwareComponent",
     "SoftwareKind",
     "VerificationState",
+    "device_to_dict",
+    "dict_to_device",
     "evaluate_freshness",
+    "load_inventory",
+    "refresh_for_assessment",
 ]

@@ -31,7 +31,7 @@ from findupdates.normalization.models import (
     merge_advisories,
     normalize_source_record,
 )
-from findupdates.normalization.serialize import advisory_to_dict, canonical_json
+from findupdates.normalization.serialize import advisory_to_dict, canonical_json, dict_to_advisory
 
 __all__ = [
     "PARSER_VERSION",
@@ -61,6 +61,7 @@ __all__ = [
     "advisory_to_dict",
     "canonical_json",
     "completeness_for",
+    "dict_to_advisory",
     "incomplete_fields_for",
     "logical_advisory_key",
     "merge_advisories",
