@@ -36,6 +36,6 @@ jobs:
       - name: Unit tests
         env:
           PYTHONPATH: src
-        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Compile check
         run: python -m compileall -q src

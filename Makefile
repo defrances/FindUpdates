@@ -10,7 +10,7 @@ typecheck:
 	mypy src
 
 test:
-	python -m unittest discover -s tests/unit -p 'test_*.py' -v
+	python -m unittest discover -s tests -p 'test_*.py' -v
 
 compile:
 	python -m compileall -q src
