@@ -1,0 +1,7 @@
+{
+  "version": "1.0",
+  "status": "draft",
+  "hash_algorithm": "sha256",
+  "retention_days": 2555,
+  "storage": "append_only"
+}

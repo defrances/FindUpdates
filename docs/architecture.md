@@ -55,6 +55,8 @@ Staged rollout proceeds lab → canary → ring-1 → ring-2 → production. Rin
 
 Post-deployment monitoring classifies each device as HEALTHY, DEGRADED, FAILED or INCONCLUSIVE. Stale or missing heartbeats are not healthy. Automatic pause is allowed; automatic rollback is not. Rollback requires adapter capability, product policy and explicit authorization on clinically critical devices.
 
+The audit trail is an append-only SHA-256 hash chain of `EvidenceRecord` rows from source ingestion through closure. Provenance distinguishes vendor facts, deterministic decisions, AI interpretation and human approvals. AI records cannot be authoritative. Human overrides append new rows; they never rewrite the original automated decision. Exported `EvidenceBundle` packages (JSON + markdown) are tamper-evident. Secrets and PHI are redacted before hashing.
+
 Deployment credentials are outside the collector/AI processes and should be issued only to approved deployment environments using short-lived identity where possible.
 
 ## Data classification

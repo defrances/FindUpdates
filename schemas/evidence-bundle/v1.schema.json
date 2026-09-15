@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/evidence-bundle/v1.schema.json",
+  "title": "EvidenceBundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "correlation_id",
+    "created_at",
+    "retention_days",
+    "chain_tip",
+    "manifest_sha256",
+    "records",
+    "attachments"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "bundle_id": {"$ref": "#/$defs/nonEmptyString"},
+    "correlation_id": {"$ref": "#/$defs/nonEmptyString"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "retention_days": {"type": "integer", "minimum": 1},
+    "chain_tip": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "object"}
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256", "media_type"],
+        "properties": {
+          "name": {"$ref": "#/$defs/nonEmptyString"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "media_type": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    }
+  }
+}

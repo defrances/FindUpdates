@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findupdates.local/schemas/evidence-record/v1.schema.json",
+  "title": "EvidenceRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_id",
+    "correlation_id",
+    "sequence",
+    "stage",
+    "provenance",
+    "payload_id",
+    "content_sha256",
+    "prev_integrity_hash",
+    "integrity_hash",
+    "actor",
+    "reason",
+    "recorded_at",
+    "redacted",
+    "supersedes",
+    "versions"
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1}
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "record_id": {"$ref": "#/$defs/nonEmptyString"},
+    "correlation_id": {"$ref": "#/$defs/nonEmptyString"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "stage": {
+      "type": "string",
+      "enum": [
+        "source_advisory",
+        "normalized_advisory",
+        "enrichment",
+        "inventory_snapshot",
+        "applicability",
+        "risk_policy",
+        "ai_analysis",
+        "change_approval",
+        "validation",
+        "package_identity",
+        "rollout_plan",
+        "deployment_result",
+        "health_observation",
+        "pause_resume_rollback",
+        "closure"
+      ]
+    },
+    "provenance": {
+      "type": "string",
+      "enum": ["vendor_fact", "deterministic", "ai_interpretation", "human_decision"]
+    },
+    "payload_id": {"$ref": "#/$defs/nonEmptyString"},
+    "content_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "prev_integrity_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "integrity_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "actor": {"$ref": "#/$defs/nonEmptyString"},
+    "reason": {"$ref": "#/$defs/nonEmptyString"},
+    "workflow_run_id": {"type": ["string", "null"], "minLength": 1},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "redacted": {"type": "boolean"},
+    "supersedes": {"type": ["string", "null"], "minLength": 1},
+    "authoritative": {"type": "boolean"},
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "parser", "policy", "prompt", "template"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/nonEmptyString"},
+        "parser": {"$ref": "#/$defs/nonEmptyString"},
+        "policy": {"$ref": "#/$defs/nonEmptyString"},
+        "prompt": {"type": ["string", "null"], "minLength": 1},
+        "template": {"type": ["string", "null"], "minLength": 1}
+      }
+    }
+  }
+}
