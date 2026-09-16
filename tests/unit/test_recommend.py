@@ -8,6 +8,13 @@ from dataclasses import replace
 from findupdates.applicability import evaluate
 from findupdates.inventory import load_synthetic_workstations, refresh_for_assessment
 from findupdates.mvp.fixtures import NOW, microsoft_advisory
+from findupdates.normalization.models import (
+    AffectedProduct,
+    Architecture,
+    ProductStatus,
+    Remediation,
+    RemediationKind,
+)
 from findupdates.pipeline.html_report import render_station_html
 from findupdates.pipeline.recommend import (
     CANDIDATE,
@@ -66,6 +73,49 @@ class StationRecommendationTests(unittest.TestCase):
         )
         self.assertNotIn("<img", escaped)
         self.assertIn("&lt;img", escaped)
+
+    def test_live_shaped_msrc_sku_is_candidate_on_24h2_station(self) -> None:
+        advisory = replace(
+            microsoft_advisory(),
+            affected_products=(
+                AffectedProduct(
+                    vendor="microsoft",
+                    product="Windows 11 Version 24H2 for x64-based Systems",
+                    version_range=None,
+                    builds=("10.0.26100.9106",),
+                    architectures=(Architecture.X64,),
+                    vendor_product_id="12390",
+                    cpe="cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.9106:*:*:*:*:*:x64:*",
+                    status=ProductStatus.AFFECTED,
+                ),
+            ),
+            remediations=(
+                Remediation(
+                    RemediationKind.VENDOR_FIX,
+                    "Install KB5120238",
+                    "10.0.17763.9121",
+                    None,
+                ),
+                Remediation(
+                    RemediationKind.VENDOR_FIX,
+                    "Install KB5120228",
+                    "10.0.26100.9106",
+                    None,
+                ),
+            ),
+        )
+        device = next(
+            item
+            for item in load_synthetic_workstations()
+            if item.device_id == "SYNTHETIC-W11-24H2-01"
+        )
+        device = refresh_for_assessment(device, NOW)
+        app = evaluate(advisory, device, now=NOW)
+        risk = assess_risk(advisory, device, app, now=NOW)
+        row = recommend_station(advisory, device, app, risk)
+        self.assertEqual(row.action, CANDIDATE)
+        self.assertEqual(row.verdict, "affected")
+        self.assertNotEqual(row.policy_result, "BLOCK")
 
 
 if __name__ == "__main__":

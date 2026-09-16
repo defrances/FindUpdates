@@ -13,6 +13,8 @@ CATALOG_PATH = REPO_ROOT / "configs" / "inventory" / "synthetic-workstations.jso
 
 WINDOWS_11_CPE = "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*"
 WINDOWS_10_CPE = "cpe:2.3:o:microsoft:windows_10:*:*:*:*:*:*:x64:*"
+WINDOWS_11_24H2_CPE = "cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.4200:*:*:*:*:*:x64:*"
+MSRC_WINDOWS_11_24H2_X64 = "12390"
 _STAMP = "2026-09-15T12:00:00+00:00"
 
 
@@ -168,6 +170,30 @@ def _stations() -> list[dict[str, Any]]:
             cpu_name=None,
             app_name="Radiology Worklist",
             app_version="1.4.0",
+        ),
+        _device(
+            device_id="SYNTHETIC-W11-24H2-01",
+            manufacturer="Example Imaging Informatics",
+            model="PACS-Validate-24H2",
+            hardware_revision="A1",
+            device_role="pacs-review-workstation",
+            clinical_criticality="medium",
+            network_exposure="restricted_lan",
+            site_group="synthetic-reading-room",
+            deployment_group="pacs-validate",
+            os_product="Windows 11 Version 24H2 for x64-based Systems",
+            os_edition="IoT Enterprise",
+            os_version="24H2",
+            os_build="10.0.26100.4200",
+            os_vendor_product_id=MSRC_WINDOWS_11_24H2_X64,
+            os_cpe=WINDOWS_11_24H2_CPE,
+            cpu_name="Core i7-1185G7",
+            cpu_version="0x0000000a",
+            cpu_vendor_product_id="intel-core-i7-1185g7",
+            cpu_cpe="cpe:2.3:h:intel:core_i7-1185g7:-:*:*:*:*:*:*:*",
+            cpu_state="verified",
+            app_name="PACS Validation Viewer",
+            app_version="12.3.4",
         ),
     ]
 

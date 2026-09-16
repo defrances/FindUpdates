@@ -42,6 +42,7 @@ class DeviceInventorySchemaTests(unittest.TestCase):
         self.assertGreaterEqual(len(devices), 4)
         ids = {item["device_id"] for item in devices}
         self.assertIn("SYNTHETIC-CT-IMG-01", ids)
+        self.assertIn("SYNTHETIC-W11-24H2-01", ids)
         errors = []
         for item in devices:
             errors.extend(list(validator.iter_errors(item)))

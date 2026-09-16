@@ -66,8 +66,11 @@ Issue #69 adds a synthetic non-PHI workstation catalog
 recommendation report (`recommendations.md`). The report names which package
 is in scope for which station, with a deterministic explanation and an
 allow-listed official vendor URL. It does not authorize installation.
-GitHub Actions live detect uses that catalog. Job Summary leads with the
-station markdown so the Summary stays under 1 MB.
+GitHub Actions live detect uses that catalog. Issue #81 adds
+`SYNTHETIC-W11-24H2-01`, whose OS identity matches a live MSRC Windows 11
+24H2 x64 SKU so applicability can return `affected` and the report can list
+`candidate_for_validation`. That row still does not authorize installation.
+Job Summary leads with the station markdown so the Summary stays under 1 MB.
 
 Issue #71 also writes a self-contained English HTML report
 (`recommendations.html`, copied to detect `report.html`). Untrusted titles are

@@ -8,6 +8,7 @@ from findupdates.applicability.versions import (
     compare_windows_versions,
     same_windows_build_family,
     version_in_range,
+    windows_build_number,
 )
 from findupdates.normalization.models import AffectedProduct, RemediationKind, UpdateAdvisory
 
@@ -34,6 +35,8 @@ def inventory_version_relation(
         except ValueError:
             return VersionRelation.UNPARSED, (ReasonCode.ADVISORY_INCOMPLETE,)
     fixed = _fixed_versions(advisory, product)
+    if treat_builds_as_windows_family:
+        fixed = [item for item in fixed if _same_windows_os_build(version, item)]
     if fixed:
         try:
             if any(compare(version, item) >= 0 for item in fixed):
@@ -53,6 +56,12 @@ def inventory_version_relation(
             return VersionRelation.UNPARSED, (ReasonCode.ADVISORY_INCOMPLETE,)
         return VersionRelation.UNPARSED, (ReasonCode.ADVISORY_INCOMPLETE,)
     return VersionRelation.NOT_APPLICABLE, ()
+
+
+def _same_windows_os_build(inventory_version: str, listed: str) -> bool:
+    left = windows_build_number(inventory_version)
+    right = windows_build_number(listed)
+    return left is not None and left == right
 
 
 def _fixed_versions(advisory: UpdateAdvisory, _product: AffectedProduct) -> tuple[str, ...]:

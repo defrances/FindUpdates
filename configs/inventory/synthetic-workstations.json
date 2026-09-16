@@ -484,6 +484,95 @@
       "freshness_state": "fresh",
       "freshness_evaluated_at": "2026-09-15T14:00:00+00:00",
       "freshness_max_age_hours": 8760
+    },
+    {
+      "schema_version": "1.0",
+      "device_id": "SYNTHETIC-W11-24H2-01",
+      "manufacturer": "Example Imaging Informatics",
+      "model": "PACS-Validate-24H2",
+      "hardware_revision": "A1",
+      "device_role": "pacs-review-workstation",
+      "clinical_criticality": "medium",
+      "network_exposure": "restricted_lan",
+      "site_group": "synthetic-reading-room",
+      "deployment_group": "pacs-validate",
+      "validation_baseline": "BASELINE-2026-09",
+      "maintenance_window": {
+        "timezone": "Europe/Madrid",
+        "days_of_week": [
+          "sun"
+        ],
+        "start_local": "02:00",
+        "duration_minutes": 120
+      },
+      "update_management": {
+        "mechanism": "intune",
+        "channel": "medical-validation"
+      },
+      "os": {
+        "product": "Windows 11 Version 24H2 for x64-based Systems",
+        "edition": "IoT Enterprise",
+        "version": "24H2",
+        "build": "10.0.26100.4200",
+        "architecture": "x64",
+        "vendor_product_id": "12390",
+        "cpe": "cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.4200:*:*:*:*:*:x64:*",
+        "verification_state": "verified"
+      },
+      "hardware_components": [
+        {
+          "kind": "cpu",
+          "vendor": "Intel",
+          "name": "Core i7-1185G7",
+          "version": "0x0000000a",
+          "verification_state": "verified",
+          "identifiers": {
+            "vendor_product_id": "intel-core-i7-1185g7",
+            "cpe": "cpe:2.3:h:intel:core_i7-1185g7:-:*:*:*:*:*:*:*",
+            "purl": null
+          }
+        },
+        {
+          "kind": "bios",
+          "vendor": "Example Imaging Informatics",
+          "name": "PACS-Validate-24H2 BIOS",
+          "version": "2.1.0",
+          "verification_state": "verified",
+          "identifiers": {
+            "vendor_product_id": "synthetic-w11-24h2-01:bios",
+            "cpe": null,
+            "purl": null
+          }
+        }
+      ],
+      "software_components": [
+        {
+          "kind": "medical_application",
+          "vendor": "Example Imaging Informatics",
+          "name": "PACS Validation Viewer",
+          "version": "12.3.4",
+          "verification_state": "verified",
+          "identifiers": {
+            "vendor_product_id": "synthetic-w11-24h2-01:app",
+            "cpe": null,
+            "purl": null
+          }
+        }
+      ],
+      "sbom_references": [
+        {
+          "format": "cyclonedx",
+          "document_ref": "synthetic://sbom/SYNTHETIC-W11-24H2-01/cyclonedx.json",
+          "document_version": "1.6",
+          "sha256": null
+        }
+      ],
+      "inventory_timestamp": "2026-09-15T12:00:00+00:00",
+      "inventory_source": "synthetic-lab-agent",
+      "source_confidence": "verified",
+      "freshness_state": "fresh",
+      "freshness_evaluated_at": "2026-09-15T14:00:00+00:00",
+      "freshness_max_age_hours": 8760
     }
   ]
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -208,6 +209,51 @@ class ApplicabilityEngineTests(unittest.TestCase):
         patched = evaluate(
             _advisory(products=(product,), remediations=remediations),
             _device(os_record=_os(build="10.0.22621.4037")),
+            now=NOW,
+        )
+        self.assertIs(below.verdict, ApplicabilityVerdict.AFFECTED)
+        self.assertIs(patched.verdict, ApplicabilityVerdict.NOT_AFFECTED)
+
+    def test_other_sku_fixed_build_does_not_patch_windows_family(self) -> None:
+        remediations = (
+            Remediation(
+                kind=RemediationKind.VENDOR_FIX,
+                description="Install KB5120238",
+                fixed_version="10.0.17763.9121",
+                package_id=PackageId(PackageKind.KB, "KB5120238"),
+            ),
+            Remediation(
+                kind=RemediationKind.VENDOR_FIX,
+                description="Install KB5120228",
+                fixed_version="10.0.26100.9106",
+                package_id=PackageId(PackageKind.KB, "KB5120228"),
+            ),
+        )
+        product = _windows_product(
+            version_range=None,
+            builds=("10.0.26100.9106",),
+            vendor_product_id="12390",
+            cpe="cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.9106:*:*:*:*:*:x64:*",
+            product="Windows 11 Version 24H2 for x64-based Systems",
+        )
+        os_record = OperatingSystem(
+            product="Windows 11 Version 24H2 for x64-based Systems",
+            edition="IoT Enterprise",
+            version="24H2",
+            build="10.0.26100.4200",
+            architecture="x64",
+            vendor_product_id="12390",
+            cpe="cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.4200:*:*:*:*:*:x64:*",
+            verification_state=VerificationState.VERIFIED,
+        )
+        below = evaluate(
+            _advisory(products=(product,), remediations=remediations),
+            _device(os_record=os_record),
+            now=NOW,
+        )
+        patched = evaluate(
+            _advisory(products=(product,), remediations=remediations),
+            _device(os_record=replace(os_record, build="10.0.26100.9106")),
             now=NOW,
         )
         self.assertIs(below.verdict, ApplicabilityVerdict.AFFECTED)
