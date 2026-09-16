@@ -79,7 +79,9 @@ Issue #71 also writes a self-contained English HTML report
 (`recommendations.html`, copied to detect `report.html`). Untrusted titles are
 escaped. There is no third-party CSS or JavaScript. Official links remain
 allow-listed HTTPS only. The HTML is the operator artifact; Job Summary stays
-markdown.
+markdown. Issue #87 copies the listed station rows to detect `report.json` and
+uploads that file as a separate GitHub Actions artifact so reviewers do not
+have to unpack the tgz. The JSON is not an install authorization.
 
 Issue #77 limits live detect collection to the last 45 days of dated vendor
 updates. Issue #75 does not copy the monthly CVRF revision onto every CVE;

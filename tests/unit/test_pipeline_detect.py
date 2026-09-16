@@ -9,7 +9,8 @@ from pathlib import Path
 
 from findupdates.mvp.fixtures import NOW
 from findupdates.pipeline.__main__ import main
-from findupdates.pipeline.detect import DetectOptions, detect_updates
+from findupdates.pipeline.detect import DetectOptions, _write_json_report, detect_updates
+from findupdates.pipeline.errors import AssessError
 from findupdates.risk.models import PolicyResult
 
 
@@ -40,6 +41,7 @@ class PipelineDetectTests(unittest.TestCase):
             rec_md = (root / "assess" / "recommendations.md").read_text(encoding="utf-8")
             rec_html = (root / "assess" / "recommendations.html").read_text(encoding="utf-8")
             report_html = (root / "report.html").read_text(encoding="utf-8")
+            report_json = json.loads((root / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(run.exit_code, 0)
         self.assertEqual(run.source, "fixtures")
         policies = {item["policy_result"] for item in summary["changes"]}
@@ -66,7 +68,18 @@ class PipelineDetectTests(unittest.TestCase):
         self.assertIn("Candidate for validation", rec_html)
         self.assertEqual(rec_html, report_html)
         self.assertIn("report.html", report)
+        self.assertIn("report.json", report)
+        self.assertEqual(report_json["kind"], "station_report")
+        self.assertEqual(report_json["source"], "fixtures")
+        self.assertEqual(report_json["exit_code"], 0)
+        self.assertEqual(report_json["authorization"], "not_an_authorization")
+        self.assertEqual(report_json["items"], recs["items"])
+        self.assertEqual(report_json["listed_count"], recs["listed_count"])
+        self.assertGreaterEqual(report_json["station_count"], 1)
+        self.assertGreaterEqual(report_json["candidate_count"], 1)
         self.assertNotIn("token", recs)
+        self.assertNotIn("token", report_json)
+        self.assertNotIn("token", json.dumps(report_json).lower())
         listed_actions = {item["action"] for item in recs["items"]}
         self.assertIn("candidate_for_validation", listed_actions)
         self.assertIn("Agentic AI analysis of updates", briefing)
@@ -81,6 +94,19 @@ class PipelineDetectTests(unittest.TestCase):
         self.assertIn("FindUpdates detect", report)
         self.assertIn("Station update recommendations", report)
         self.assertIn("KB5060001", report)
+
+    def test_json_report_refuses_token_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            folder = root / "assess"
+            folder.mkdir()
+            (folder / "recommendations.json").write_text(
+                json.dumps({"correlation_id": "x", "items": [], "token": "secret"}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(AssessError):
+                _write_json_report(root, source="fixtures", exit_code=0)
+            self.assertFalse((root / "report.json").exists())
 
 
 if __name__ == "__main__":

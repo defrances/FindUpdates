@@ -21,6 +21,7 @@ from findupdates.mvp.fixtures import intel_advisory, microsoft_advisory
 from findupdates.normalization.serialize import advisory_to_dict
 from findupdates.pipeline.assess import AssessOptions, AssessRun, assess_collected
 from findupdates.pipeline.errors import AssessError
+from findupdates.pipeline.recommend import CANDIDATE, DO_NOT_INSTALL, NOT_IN_SCOPE
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,6 +110,7 @@ def detect_updates(options: DetectOptions, *, now: datetime) -> DetectRun:
     report = render_detect_report(source, assess, output / "assess")
     _write_report(output, report)
     _copy_html_report(output)
+    _write_json_report(output, source=source, exit_code=assess.exit_code)
     return DetectRun(
         source=source,
         assess=assess,
@@ -165,6 +167,7 @@ def render_detect_report(source: str, run: AssessRun, assess_dir: Path) -> str:
     lines.extend(["", "## Artifacts"])
     lines.append(
         "Operator HTML report is `report.html` (English, self-contained). "
+        "Operator JSON report is `report.json` (listed station rows). "
         "GitHub Job Summary stays markdown so it remains under 1 MB."
     )
     lines.append("Full bounded AI briefing is `assess/analysis/updates.md` in the job artifact.")
@@ -219,6 +222,59 @@ def _copy_html_report(output: Path) -> None:
     source = output / "assess" / "recommendations.html"
     if source.is_file():
         (output / "report.html").write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def _write_json_report(output: Path, *, source: str, exit_code: int) -> None:
+    recs_path = output / "assess" / "recommendations.json"
+    if not recs_path.is_file():
+        return
+    try:
+        payload = json.loads(recs_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AssessError("recommendations.json is not valid JSON") from exc
+    if not isinstance(payload, dict):
+        raise AssessError("recommendations.json is not an object")
+    if "token" in payload:
+        raise AssessError("refusing to write report JSON that contains a token field")
+    items_raw = payload.get("items")
+    if items_raw is None:
+        items: list[dict[str, object]] = []
+    elif not isinstance(items_raw, list):
+        raise AssessError("recommendations.json items must be a list")
+    else:
+        items = []
+        for item in items_raw:
+            if not isinstance(item, dict):
+                raise AssessError("recommendations.json items must be objects")
+            if "token" in item:
+                raise AssessError("refusing to write report JSON that contains a token field")
+            items.append(item)
+    actions = [str(item.get("action", "")) for item in items]
+    report: dict[str, object] = {
+        "authorization": "not_an_authorization",
+        "candidate_count": actions.count(CANDIDATE),
+        "correlation_id": payload.get("correlation_id", ""),
+        "disclaimer": (
+            "This report is not an authorization to install, approve, or deploy. "
+            "HOLD and BLOCK stay HOLD and BLOCK."
+        ),
+        "do_not_install_count": actions.count(DO_NOT_INSTALL),
+        "exit_code": exit_code,
+        "item_count": payload.get("item_count", 0),
+        "items": items,
+        "kind": "station_report",
+        "listed_count": payload.get("listed_count", len(items)),
+        "not_in_scope_count": actions.count(NOT_IN_SCOPE),
+        "schema_version": "1.0",
+        "source": source,
+        "station_count": len({item.get("device_id") for item in items if item.get("device_id")}),
+    }
+    if "token" in report:
+        raise AssessError("refusing to write report JSON that contains a token field")
+    (output / "report.json").write_text(
+        json.dumps(report, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _failure_report(source: str, notes: list[str]) -> str:

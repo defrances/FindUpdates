@@ -123,9 +123,9 @@ flowchart TD
   Fix --> Detect["python -m findupdates.pipeline detect"]
   Poll --> Detect
   Detect --> Assess["assess: risk → bounded AI → dry-run upsert → notify"]
-  Assess --> Report["report.md + report.html"]
+  Assess --> Report["report.md + report.html + report.json"]
   Report --> Summary["GitHub Actions Job Summary (markdown)"]
-  Report --> Artifacts["upload-artifact findupdates-detect"]
+  Report --> Artifacts["upload-artifact findupdates-detect + findupdates-report-json"]
   Detect -.->|"never"| NoDeploy["Intune / OEM / production install"]
 ```
 
@@ -226,10 +226,11 @@ On GitHub: **Actions → Detect updates → Run workflow**. Default source is
 `fixtures`. Live uses `configs/inventory/synthetic-workstations.json`. The Job
 Summary leads with per-station markdown (package, explanation, official URL)
 and is not an install authorization. Open `report.html` in the artifact for the
-English HTML report. Live collection uses a **45-day** lookback so one run
-covers a Patch Tuesday plus the prior month without a full historical MSRC dump.
-GitHub Actions uploads one
-`.tgz` archive. Artifacts are retained for 14 days.
+English HTML report, or download `findupdates-report-json` for `report.json`
+(listed station rows, counts, official URLs). Live collection uses a **45-day**
+lookback so one run covers a Patch Tuesday plus the prior month without a full
+historical MSRC dump. GitHub Actions uploads one `.tgz` archive plus a separate
+JSON report artifact. Artifacts are retained for 14 days.
 
 ### MVP end-to-end demo
 

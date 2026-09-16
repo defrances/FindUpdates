@@ -53,6 +53,7 @@ never authorize deployment.
 Issue #67 writes a run-level Agentic AI briefing from those bound analyses:
 `--output-dir/analysis/updates.md` and `--output-dir/analysis/run.json`. Detect
 Job Summary leads with the station recommendation markdown (#69); the operator
-HTML report is `report.html` (#71). The matching
+HTML report is `report.html` (#71). The listed station rows are also
+`report.json` (#87), uploaded as a separate Actions artifact. The matching
 analysis is attached to the change record as evidence and Change Planning text;
 it still cannot change `policy_result`.
