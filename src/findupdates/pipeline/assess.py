@@ -9,7 +9,7 @@ import json
 import os
 from collections import defaultdict
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +20,7 @@ from findupdates.agents import (
     analyze,
     brief_updates,
     briefing_to_dict,
+    default_provider,
 )
 from findupdates.agents.models import AgentAnalysis
 from findupdates.agents.provider import AgentProvider
@@ -313,6 +314,11 @@ def _assess_all(
     enrichment: EnrichmentService | None,
     notifications: NotificationService | None,
 ) -> tuple[tuple[AssessedChange, ...], list[str]]:
+    settings = options.settings or Settings.from_env()
+    provider = options.analysis_provider
+    if provider is None and not options.skip_ai:
+        provider = default_provider(settings)
+    options = replace(options, analysis_provider=provider, settings=settings)
     grouped: dict[str, list[DeviceInventory]] = defaultdict(list)
     for device in devices:
         grouped[device.deployment_group].append(device)

@@ -7,9 +7,16 @@ import tempfile
 import unittest
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlencode
 
 from findupdates.agents import OfflineProvider
+from findupdates.agents.copilot import (
+    CompletionBudget,
+    CopilotCommandResult,
+    CopilotProvider,
+    RecordingCopilotRunner,
+)
 from findupdates.changerecords import MemoryChangeStore
 from findupdates.collectors.http import HttpClient, HttpTransportResult, MappingTransport
 from findupdates.config import Settings
@@ -29,6 +36,7 @@ from findupdates.notifications import (
 from findupdates.pipeline.__main__ import main
 from findupdates.pipeline.assess import AssessOptions, assess_collected
 from findupdates.risk.models import PolicyResult
+from tests.unit.test_copilot import _analysis_json
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENRICHMENT_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "enrichment"
@@ -535,6 +543,52 @@ class PipelineAssessAiTests(unittest.TestCase):
         self.assertNotIn("token", briefing)
         self.assertEqual(briefing["item_count"], 1)
         self.assertEqual(briefing["items"][0]["policy_result"], row.policy_result)
+
+    def test_assess_reuses_one_copilot_budget_for_the_run(self) -> None:
+        runner = RecordingCopilotRunner(
+            results=[
+                CopilotCommandResult(0, json.dumps(_analysis_json())),
+                CopilotCommandResult(0, json.dumps(_analysis_json())),
+            ]
+        )
+        created: list[object] = []
+
+        def factory(settings: Settings) -> CompletionBudget:
+            created.append(settings)
+            return CompletionBudget(
+                CopilotProvider(runner=runner, environ={"GITHUB_TOKEN": "unit"}),
+                settings.copilot_max_completions,
+            )
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            with patch("findupdates.pipeline.assess.default_provider", factory):
+                run = assess_collected(
+                    AssessOptions(
+                        advisories=_write_advisories(root, microsoft_advisory(), intel_advisory()),
+                        inventory=_write_inventory(root),
+                        output_dir=root / "out",
+                        dry_run=True,
+                        skip_enrichment=True,
+                        skip_notify=True,
+                        settings=Settings(
+                            ai_enabled=True,
+                            ai_provider="copilot",
+                            copilot_max_completions=1,
+                        ),
+                    ),
+                    now=NOW,
+                )
+        self.assertEqual(run.exit_code, 0)
+        self.assertEqual(len(created), 1)
+        self.assertEqual(len(runner.calls), 1)
+        self.assertEqual(len(run.changes), 2)
+        self.assertEqual(sum(1 for item in run.changes if item.analysis_fallback), 1)
+        self.assertEqual(
+            sum(1 for item in run.changes if item.analyzed and not item.analysis_fallback),
+            1,
+        )
+        self.assertTrue(all(item.policy_result for item in run.changes))
 
     def test_skip_ai_writes_no_analysis(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

@@ -49,7 +49,9 @@ failure is recorded; it does not abort assess or rewrite `policy_result`.
 
 Issue #63 runs bounded agentic analysis after risk unless `--skip-ai` is set.
 GitHub Actions `detect.yml` may call Copilot CLI (#83); missing CLI or seat
-uses the offline/template provider. Analysis JSON is
+uses the offline/template provider. Issue #85 creates that Copilot provider
+once per assess run so `FINDUPDATES_COPILOT_MAX_COMPLETIONS` caps the whole
+job. Analysis JSON is
 written under `--output-dir/analysis/`. AI cannot change `policy_result`.
 `python -m findupdates.pipeline detect` stages fixtures or live collector
 output, then assess + AI + notify. GitHub Actions `detect.yml` publishes the
