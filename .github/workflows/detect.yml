@@ -14,11 +14,10 @@ on:
         default: fixtures
 
 # No pull_request trigger: untrusted PRs must not poll vendors or create
-# notification noise. This workflow never deploys. Copilot is JSON-only
-# analysis; missing CLI or seat falls back to the offline template.
+# notification noise. This workflow never deploys. Agentic AI / Copilot is off;
+# assess stays deterministic (offline template only if a caller re-enables AI).
 permissions:
   contents: read
-  copilot-requests: write
 
 jobs:
   detect:
@@ -26,15 +25,12 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      copilot-requests: write
     env:
       PYTHONPATH: src
-      FINDUPDATES_AI_ENABLED: "true"
-      FINDUPDATES_AI_PROVIDER: copilot
-      FINDUPDATES_COPILOT_MAX_COMPLETIONS: "8"
+      FINDUPDATES_AI_ENABLED: "false"
+      FINDUPDATES_AI_PROVIDER: offline
       FINDUPDATES_MSRC_LOOKBACK_DAYS: "45"
       FINDUPDATES_INTEL_LOOKBACK_DAYS: "45"
-      COPILOT_AUTO_UPDATE: "false"
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
@@ -49,9 +45,6 @@ jobs:
           cache-dependency-path: requirements-dev.lock
       - name: Install development tools
         run: python -m pip install -r requirements-dev.lock
-      - name: Install Copilot CLI
-        continue-on-error: true
-        run: npm install -g @github/copilot
       - name: Detect, analyze, notify
         env:
           DETECT_SOURCE: ${{ github.event.inputs.source || 'fixtures' }}
@@ -64,10 +57,12 @@ jobs:
             python -m findupdates.pipeline detect \
               --source live \
               --inventory configs/inventory/synthetic-workstations.json \
+              --skip-ai \
               --output-dir "${OUT}"
           else
             python -m findupdates.pipeline detect \
               --source fixtures \
+              --skip-ai \
               --output-dir "${OUT}"
           fi
           status=$?

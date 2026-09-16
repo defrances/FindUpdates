@@ -156,11 +156,14 @@ class CopilotProviderTests(unittest.TestCase):
         self.assertEqual(provider.identity.provider, "github-copilot")
         self.assertEqual(provider.identity.name, "claude-haiku-4.5")
 
-    def test_detect_honors_copilot_and_forces_unknown_offline(self) -> None:
-        copilot = _detect_ai_settings(Settings(ai_enabled=False, ai_provider="copilot"))
+    def test_detect_honors_disabled_ai_and_forces_unknown_offline(self) -> None:
+        disabled = _detect_ai_settings(Settings(ai_enabled=False, ai_provider="copilot"))
+        self.assertFalse(disabled.ai_enabled)
+        self.assertEqual(disabled.ai_provider, "offline")
+        copilot = _detect_ai_settings(Settings(ai_enabled=True, ai_provider="copilot"))
         self.assertTrue(copilot.ai_enabled)
         self.assertEqual(copilot.ai_provider, "copilot")
-        unknown = _detect_ai_settings(Settings(ai_provider="openai"))
+        unknown = _detect_ai_settings(Settings(ai_enabled=True, ai_provider="openai"))
         self.assertEqual(unknown.ai_provider, "offline")
 
 

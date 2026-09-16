@@ -210,6 +210,8 @@ def _write_fixture_inventory(output: Path, now: datetime) -> Path:
 
 def _detect_ai_settings(settings: Settings | None) -> Settings:
     base = settings or Settings.from_env()
+    if not base.ai_enabled:
+        return replace(base, ai_enabled=False, ai_provider="offline")
     provider = base.ai_provider if base.ai_provider in COPILOT_PROVIDERS else "offline"
     return replace(base, ai_enabled=True, ai_provider=provider)
 

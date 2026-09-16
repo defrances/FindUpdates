@@ -39,16 +39,17 @@ There is no tool interface. A provider may only return a JSON object.
 The default runtime setting is `FINDUPDATES_AI_ENABLED=false`.
 
 Issue #63 wires this layer into `python -m findupdates.pipeline assess` after
-risk (unless `--skip-ai`) and into `python -m findupdates.pipeline detect` for
-GitHub Actions. Issue #83 selects GitHub Copilot when
-`FINDUPDATES_AI_PROVIDER` is `copilot` or `github-copilot`. The CLI is invoked
-without tools and without `--yolo`. Tokens stay in `COPILOT_GITHUB_TOKEN`,
-`GH_TOKEN`, or `GITHUB_TOKEN` and are never written to analysis JSON. Live
-Copilot calls are capped for the whole assess/detect run
-(`FINDUPDATES_COPILOT_MAX_COMPLETIONS`, default 8), not per advisory. Remaining
-pairs use the offline template. A missing CLI, missing token, or Copilot error
-fails over to that template. Unknown providers still force offline on detect. Analysis artifacts
-never authorize deployment.
+risk (unless `--skip-ai`) and into `python -m findupdates.pipeline detect`.
+GitHub Actions `detect.yml` keeps Agentic AI **off** (`FINDUPDATES_AI_ENABLED=false`
+and `--skip-ai`). Issue #83 selects GitHub Copilot only when a caller explicitly
+sets `FINDUPDATES_AI_ENABLED=true` and `FINDUPDATES_AI_PROVIDER` is `copilot` or
+`github-copilot`. The CLI is invoked without tools and without `--yolo`. Tokens
+stay in `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` and are never
+written to analysis JSON. If Copilot is re-enabled, live calls are capped for
+the whole assess/detect run (`FINDUPDATES_COPILOT_MAX_COMPLETIONS`, default 8),
+not per advisory. Remaining pairs use the offline template. A missing CLI,
+missing token, or Copilot error fails over to that template. Unknown providers
+still force offline on detect. Analysis artifacts never authorize deployment.
 
 Issue #67 writes a run-level Agentic AI briefing from those bound analyses:
 `--output-dir/analysis/updates.md` and `--output-dir/analysis/run.json`. Detect
