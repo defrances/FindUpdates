@@ -8,7 +8,7 @@ from datetime import datetime
 
 @dataclass(frozen=True, slots=True)
 class CollectionCheckpoint:
-    """Cursor plus per-document hashes so unchanged polls stay idempotent."""
+    """Resume watermark plus per-document hashes so unchanged polls stay idempotent."""
 
     source: str
     cursor: str | None
