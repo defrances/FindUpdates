@@ -36,7 +36,7 @@ def inventory_version_relation(
             return VersionRelation.UNPARSED, (ReasonCode.ADVISORY_INCOMPLETE,)
     fixed = _fixed_versions(advisory, product)
     if treat_builds_as_windows_family:
-        fixed = [item for item in fixed if _same_windows_os_build(version, item)]
+        fixed = tuple(item for item in fixed if _same_windows_os_build(version, item))
     if fixed:
         try:
             if any(compare(version, item) >= 0 for item in fixed):
