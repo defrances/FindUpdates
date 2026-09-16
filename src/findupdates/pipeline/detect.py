@@ -8,6 +8,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from findupdates.agents.copilot import COPILOT_PROVIDERS
 from findupdates.collectors.runner import PollOptions, poll
 from findupdates.config import Settings
 from findupdates.inventory import (
@@ -89,7 +90,7 @@ def detect_updates(options: DetectOptions, *, now: datetime) -> DetectRun:
         notes.append("source=live")
     else:
         raise AssessError(f"unknown detect source {options.source}")
-    settings = _offline_ai_settings(options.settings)
+    settings = _detect_ai_settings(options.settings)
     assess = assess_collected(
         AssessOptions(
             advisories=advisories,
@@ -204,9 +205,10 @@ def _write_fixture_inventory(output: Path, now: datetime) -> Path:
     return path
 
 
-def _offline_ai_settings(settings: Settings | None) -> Settings:
+def _detect_ai_settings(settings: Settings | None) -> Settings:
     base = settings or Settings.from_env()
-    return replace(base, ai_enabled=True, ai_provider="offline")
+    provider = base.ai_provider if base.ai_provider in COPILOT_PROVIDERS else "offline"
+    return replace(base, ai_enabled=True, ai_provider=provider)
 
 
 def _write_report(output: Path, report: str) -> None:

@@ -5,6 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 
 from findupdates.agents.context import build_input
+from findupdates.agents.copilot import (
+    COPILOT_PROVIDERS,
+    CompletionBudget,
+    CopilotProvider,
+)
 from findupdates.agents.models import AgentAnalysis
 from findupdates.agents.prompts import SYSTEM_PROMPT
 from findupdates.agents.provider import (
@@ -67,6 +72,11 @@ def default_provider(settings: Settings) -> AgentProvider:
         return UnavailableProvider()
     if settings.ai_provider in {"offline", "template"}:
         return OfflineProvider()
+    if settings.ai_provider in COPILOT_PROVIDERS:
+        return CompletionBudget(
+            CopilotProvider.from_settings(settings),
+            settings.copilot_max_completions,
+        )
     return UnavailableProvider()
 
 

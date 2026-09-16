@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-15
 - Owners: FindUpdates contributors
-- Related issues: #5, #17, #19, #21
+- Related issues: #5, #17, #19, #21, #83
 
 ## Context
 
@@ -28,7 +28,9 @@ analysis schema so change-planning records can exist without AI.
 - Skipping analysis when AI is down — would block triage records on an optional
   component.
 - Shipping an HTTP model SDK in the lockfile — not required for the bounded
-  contract and would pull unused network surface into CI.
+  contract and would pull unused network surface into CI. GitHub Copilot is
+  invoked through the official CLI with tools disabled, not through
+  `github-copilot-sdk`.
 
 ## Consequences
 
@@ -41,14 +43,20 @@ analysis schema so change-planning records can exist without AI.
 
 - Offline templates are not a substitute for a reviewed production model.
 - Redaction is pattern-based and must be expanded if new PHI fields appear.
+- Copilot CLI in Actions requires a Copilot seat or org billing policy; when
+  that is missing, the run stays on the offline template.
 
 ## Validation
 
 Unit tests cover Microsoft and Intel representative advisories, provider outage
-fallback, vendor-text injection, tool/deploy payloads, invented CVEs and PHI
-redaction.
+fallback, vendor-text injection, tool/deploy payloads, invented CVEs, PHI
+redaction, and Copilot CLI argv/token/budget fallback.
 
 ## Revisit triggers
 
 - A production model provider is added behind secret-store credentials.
 - An explicit OEM or PHI field is introduced on inventory.
+
+Issue #83 added GitHub Copilot as an optional CLI provider. It remains
+JSON-only, non-authoritative, capped, and removable via
+`FINDUPDATES_AI_PROVIDER=offline`.

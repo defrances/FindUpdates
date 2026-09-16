@@ -40,8 +40,14 @@ The default runtime setting is `FINDUPDATES_AI_ENABLED=false`.
 
 Issue #63 wires this layer into `python -m findupdates.pipeline assess` after
 risk (unless `--skip-ai`) and into `python -m findupdates.pipeline detect` for
-GitHub Actions. Detect forces the offline provider so Actions need no model
-keys. Analysis artifacts never authorize deployment.
+GitHub Actions. Issue #83 selects GitHub Copilot when
+`FINDUPDATES_AI_PROVIDER` is `copilot` or `github-copilot`. The CLI is invoked
+without tools and without `--yolo`. Tokens stay in `COPILOT_GITHUB_TOKEN`,
+`GH_TOKEN`, or `GITHUB_TOKEN` and are never written to analysis JSON. Live
+Copilot calls are capped (`FINDUPDATES_COPILOT_MAX_COMPLETIONS`, default 8);
+a missing CLI, missing token, or Copilot error fails over to the offline
+template. Unknown providers still force offline on detect. Analysis artifacts
+never authorize deployment.
 
 Issue #67 writes a run-level Agentic AI briefing from those bound analyses:
 `--output-dir/analysis/updates.md` and `--output-dir/analysis/run.json`. Detect
