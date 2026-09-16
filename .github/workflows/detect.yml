@@ -14,9 +14,11 @@ on:
         default: fixtures
 
 # No pull_request trigger: untrusted PRs must not poll vendors or create
-# notification noise. This workflow never deploys.
+# notification noise. This workflow never deploys. Copilot is JSON-only
+# analysis; missing CLI or seat falls back to the offline template.
 permissions:
   contents: read
+  copilot-requests: write
 
 jobs:
   detect:
@@ -24,12 +26,16 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      copilot-requests: write
     env:
       PYTHONPATH: src
       FINDUPDATES_AI_ENABLED: "true"
-      FINDUPDATES_AI_PROVIDER: offline
+      FINDUPDATES_AI_PROVIDER: copilot
+      FINDUPDATES_COPILOT_MAX_COMPLETIONS: "8"
       FINDUPDATES_MSRC_LOOKBACK_DAYS: "45"
       FINDUPDATES_INTEL_LOOKBACK_DAYS: "45"
+      COPILOT_AUTO_UPDATE: "false"
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -43,6 +49,9 @@ jobs:
           cache-dependency-path: requirements-dev.lock
       - name: Install development tools
         run: python -m pip install -r requirements-dev.lock
+      - name: Install Copilot CLI
+        continue-on-error: true
+        run: npm install -g @github/copilot
       - name: Detect, analyze, notify
         env:
           DETECT_SOURCE: ${{ github.event.inputs.source || 'fixtures' }}

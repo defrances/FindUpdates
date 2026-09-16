@@ -99,7 +99,7 @@ flowchart LR
 | Enrich | Attach NVD CVSS and CISA KEV context. Prioritization only. | Absence from KEV is not proof of no exploitation. Outages keep last-known cache or stay unknown. Vendor `affected_products` are not overwritten. |
 | Inventory + applicability | Match advisories to devices with strong product identity. | Empty, stale, or weakly identified inventory cannot yield `not_affected`. Unknown applicability is `BLOCK`. |
 | Risk / policy | Versioned deterministic function of advisory, inventory, applicability, and policy. Hard gates override numeric score. | Invalid policy fails closed. Draft policy under `configs/policies/` is not production approval. |
-| Bounded AI | Explain and correlate after risk. Offline/template provider is used in GitHub Actions. | AI cannot change `policy_result`, target set, or approvals. Provider outage still emits the analysis schema. |
+| Bounded AI | Explain and correlate after risk. Actions may call GitHub Copilot CLI; missing seat or CLI falls back to the offline template. | AI cannot change `policy_result`, target set, or approvals. Copilot has no tools. Provider outage still emits the analysis schema. |
 | Change records | One GitHub Issue (or in-memory record) per `(advisory_id, deployment_group)`. | HOLD/BLOCK cannot be overridden by a dispatch input. Promotion never runs on pull requests. |
 | Notify | Fan-out on material risk, KEV, device-count, policy, or operational-failure changes. Unchanged rescans are suppressed. | Delivery failure is recorded; it does not abort assess or rewrite policy. Webhook URLs are read at request time, never stored on the record. |
 | Validate → deploy → rollout → monitor | Lab profile, adapter, canary/rings, health classification. Wired in the MVP demo with mock adapters. | Required FAIL / BLOCKED / INCONCLUSIVE blocks promotion. Automatic pause is allowed; automatic rollback is not. Kill switch stops new installs without stopping collection. |
@@ -111,7 +111,9 @@ The detailed trust model lives in [docs/architecture.md](docs/architecture.md).
 ## GitHub detect path (what Actions run today)
 
 `.github/workflows/detect.yml` is the scheduled intelligence loop. It never
-deploys, never runs on pull requests, and uses the offline AI provider.
+deploys, never runs on pull requests, and may call GitHub Copilot for a capped
+number of JSON-only analyses. Missing Copilot CLI or seat falls back to the
+offline template.
 
 ```mermaid
 flowchart TD
@@ -142,7 +144,7 @@ Companion workflows:
 | Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` may poll live only on schedule or `workflow_dispatch`. |
 | NVD / CISA KEV enrichment | Implemented. Optional during detect (`--enrich`). |
 | Deterministic applicability, risk, policy | Implemented. |
-| Bounded AI analysis | Implemented. Actions use the offline/template provider. |
+| Bounded AI analysis | Implemented. Actions may use GitHub Copilot CLI; unavailable Copilot falls back to the offline/template provider. |
 | Change-record upsert | Memory store for CI/MVP. `GitHubChangeStore` for live Issues (`--store github`). Detect always dry-runs upsert. |
 | Notifications | In-memory GitHub comment formatter. Optional webhook from `FINDUPDATES_NOTIFICATION_WEBHOOK_URL`. Detect publishes a Job Summary. No live Issue-comment POST from assess/detect. |
 | Lab validation, deployment, rollout, monitoring, audit | Implemented against `MockDeploymentAdapter`, `SimulatedTarget`, and simulated heartbeats in the MVP demo. |

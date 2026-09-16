@@ -1,6 +1,7 @@
 """Bounded AI analysis helpers outside the authoritative safety path."""
 
 from findupdates.agents.brief import BriefSource, UpdateBriefing, brief_updates, briefing_to_dict
+from findupdates.agents.copilot import CopilotProvider
 from findupdates.agents.models import (
     PROMPT_VERSION,
     SCHEMA_VERSION,
@@ -30,6 +31,7 @@ __all__ = [
     "AnalysisConfidence",
     "Claim",
     "ClaimKind",
+    "CopilotProvider",
     "ModelIdentity",
     "OfflineProvider",
     "ProviderUnavailableError",

@@ -48,7 +48,8 @@ written under `--output-dir/notifications/` when output-dir is set. Delivery
 failure is recorded; it does not abort assess or rewrite `policy_result`.
 
 Issue #63 runs bounded agentic analysis after risk unless `--skip-ai` is set.
-The offline/template provider is used on GitHub Actions; analysis JSON is
+GitHub Actions `detect.yml` may call Copilot CLI (#83); missing CLI or seat
+uses the offline/template provider. Analysis JSON is
 written under `--output-dir/analysis/`. AI cannot change `policy_result`.
 `python -m findupdates.pipeline detect` stages fixtures or live collector
 output, then assess + AI + notify. GitHub Actions `detect.yml` publishes the
