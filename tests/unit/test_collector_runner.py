@@ -79,8 +79,11 @@ class CollectorPersistTests(unittest.TestCase):
             self.assertTrue(path.exists())
             self.assertEqual(loaded, original)
             payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                set(payload),
+                {"captured_at", "document_hashes", "source", "watermark"},
+            )
             self.assertEqual(payload["watermark"], original.watermark)
-            self.assertNotIn("cursor", payload)
             self.assertIsNone(load_checkpoint(directory, "intel-csaf"))
 
 
