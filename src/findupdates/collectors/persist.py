@@ -32,15 +32,15 @@ def load_checkpoint(directory: Path, source: str) -> CollectionCheckpoint | None
     if not isinstance(payload, dict):
         raise ParseError(f"checkpoint {path} must be a JSON object")
     raw_source = payload.get("source")
-    cursor = payload.get("cursor")
+    watermark = payload.get("watermark")
     captured = parse_datetime(payload.get("captured_at"))
     hashes = payload.get("document_hashes")
     if not isinstance(raw_source, str) or not raw_source.strip():
         raise ParseError(f"checkpoint {path} is missing source")
     if captured is None:
         raise ParseError(f"checkpoint {path} is missing captured_at")
-    if cursor is not None and not isinstance(cursor, str):
-        raise ParseError(f"checkpoint {path} cursor must be a string")
+    if watermark is not None and not isinstance(watermark, str):
+        raise ParseError(f"checkpoint {path} watermark must be a string")
     if not isinstance(hashes, list):
         raise ParseError(f"checkpoint {path} document_hashes must be an array")
     pairs: list[tuple[str, str]] = []
@@ -55,7 +55,7 @@ def load_checkpoint(directory: Path, source: str) -> CollectionCheckpoint | None
         pairs.append((item[0], item[1]))
     return CollectionCheckpoint(
         source=raw_source.strip(),
-        cursor=cursor,
+        watermark=watermark,
         document_hashes=tuple(pairs),
         captured_at=captured,
     )
@@ -67,7 +67,7 @@ def save_checkpoint(directory: Path, checkpoint: CollectionCheckpoint) -> Path:
     path = checkpoint_path(directory, checkpoint.source)
     payload = {
         "source": checkpoint.source,
-        "cursor": checkpoint.cursor,
+        "watermark": checkpoint.watermark,
         "document_hashes": [list(item) for item in checkpoint.document_hashes],
         "captured_at": checkpoint.captured_at.isoformat().replace("+00:00", "Z"),
     }

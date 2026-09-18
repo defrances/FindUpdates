@@ -11,7 +11,7 @@ class CollectionCheckpoint:
     """Resume watermark plus per-document hashes so unchanged polls stay idempotent."""
 
     source: str
-    cursor: str | None
+    watermark: str | None
     document_hashes: tuple[tuple[str, str], ...]
     captured_at: datetime
 

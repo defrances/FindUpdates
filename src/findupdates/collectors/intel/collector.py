@@ -142,7 +142,7 @@ class IntelCollector:
                 metrics = metrics.add(changed=1)
         new_checkpoint = CollectionCheckpoint(
             source="intel-csaf",
-            cursor=collected_at.isoformat().replace("+00:00", "Z"),
+            watermark=collected_at.isoformat().replace("+00:00", "Z"),
             document_hashes=tuple(sorted(next_hashes.items())),
             captured_at=collected_at,
         )
@@ -212,7 +212,7 @@ def _select_entries(
     if checkpoint is None:
         start = window_start(retrieved_at, lookback)
         return [entry for entry in entries if entry.updated_at >= start]
-    cursor = parse_datetime(checkpoint.cursor)
-    if cursor is None:
+    resume_from = parse_datetime(checkpoint.watermark)
+    if resume_from is None:
         return entries
-    return [entry for entry in entries if entry.updated_at >= cursor]
+    return [entry for entry in entries if entry.updated_at >= resume_from]

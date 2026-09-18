@@ -68,7 +68,7 @@ class CollectorPersistTests(unittest.TestCase):
     def test_checkpoint_round_trip(self) -> None:
         original = CollectionCheckpoint(
             source="msrc",
-            cursor="2026-09-15T18:00:00Z",
+            watermark="2026-09-15T18:00:00Z",
             document_hashes=(("doc:2026-Sep", "ab" * 32),),
             captured_at=NOW,
         )
@@ -78,6 +78,9 @@ class CollectorPersistTests(unittest.TestCase):
             loaded = load_checkpoint(directory, "msrc")
             self.assertTrue(path.exists())
             self.assertEqual(loaded, original)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["watermark"], original.watermark)
+            self.assertNotIn("cursor", payload)
             self.assertIsNone(load_checkpoint(directory, "intel-csaf"))
 
 

@@ -151,7 +151,7 @@ class MicrosoftCollector:
                     metrics = metrics.add(changed=1)
         new_checkpoint = CollectionCheckpoint(
             source="msrc",
-            cursor=collected_at.isoformat().replace("+00:00", "Z"),
+            watermark=collected_at.isoformat().replace("+00:00", "Z"),
             document_hashes=tuple(sorted(next_hashes.items())),
             captured_at=collected_at,
         )
@@ -237,10 +237,10 @@ def _select_entries(
     if checkpoint is None:
         start = window_start(retrieved_at, lookback)
         return [entry for entry in entries if entry.current_release_date >= start]
-    cursor = parse_datetime(checkpoint.cursor)
-    if cursor is None:
+    resume_from = parse_datetime(checkpoint.watermark)
+    if resume_from is None:
         return entries
-    return [entry for entry in entries if entry.current_release_date >= cursor]
+    return [entry for entry in entries if entry.current_release_date >= resume_from]
 
 
 def _document_lookback(lookback: timedelta) -> timedelta:
@@ -255,5 +255,5 @@ def _incremental_after(
 ) -> datetime:
     if checkpoint is None:
         return window_start(retrieved_at, lookback)
-    cursor = parse_datetime(checkpoint.cursor)
-    return cursor if cursor is not None else window_start(retrieved_at, lookback)
+    resume_from = parse_datetime(checkpoint.watermark)
+    return resume_from if resume_from is not None else window_start(retrieved_at, lookback)
