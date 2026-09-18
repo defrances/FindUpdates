@@ -55,4 +55,6 @@ collector JSON plus inventory into change records. `python -m findupdates.pipeli
 notifications. After that run, #67 writes the Agentic AI analysis of detected
 updates (`analysis/updates.md`). The MVP e2e path in #34 remains fixture-driven. GitHub Actions
 `collect.yml` runs `--dry-run` only so pull-request CI never depends on live
-vendor HTTP. `detect.yml` is schedule/`workflow_dispatch` only (no `pull_request`).
+vendor HTTP. `detect.yml` is a daily schedule plus `workflow_dispatch` only
+(no `pull_request`). The scheduled run uses `source=live` and then notifies
+Orchestrator.

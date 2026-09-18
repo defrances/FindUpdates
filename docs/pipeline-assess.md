@@ -81,7 +81,10 @@ escaped. There is no third-party CSS or JavaScript. Official links remain
 allow-listed HTTPS only. The HTML is the operator artifact; Job Summary stays
 markdown. Issue #87 copies the listed station rows to detect `report.json` and
 uploads that file as a separate GitHub Actions artifact so reviewers do not
-have to unpack the tgz. The JSON is not an install authorization.
+have to unpack the tgz. The JSON is not an install authorization. Issue #89
+runs detect once per day with `source=live` and always notifies Orchestrator
+with the run id (`findupdates-complete`). Detect does not send email and does
+not create GitHub Issues.
 
 Issue #77 limits live detect collection to the last 45 days of dated vendor
 updates. Issue #75 does not copy the monthly CVRF revision onto every CVE;
@@ -112,7 +115,8 @@ An empty window is not treated as not_affected.
 Assess does not poll vendors, run lab validation, or invoke a deployment
 adapter. It does not post live GitHub Issue comments, persist a cross-process
 notification log, or add an acknowledgement CLI. GitHub Actions `collect.yml`
-stays `--dry-run` only. `detect.yml` may poll vendors only on schedule or
-`workflow_dispatch` with `--source live`; it never deploys. Promotion still uses
+stays `--dry-run` only. `detect.yml` may poll vendors only on the daily
+schedule or `workflow_dispatch` with `--source live`; it never deploys.
+Promotion still uses
 `python -m findupdates.changerecords.workflow` and still reads policy from the
 stored record.

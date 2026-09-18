@@ -111,21 +111,25 @@ The detailed trust model lives in [docs/architecture.md](docs/architecture.md).
 ## GitHub detect path (what Actions run today)
 
 `.github/workflows/detect.yml` is the scheduled intelligence loop. It never
-deploys, never runs on pull requests, and may call GitHub Copilot for a capped
-number of JSON-only analyses. Missing Copilot CLI or seat falls back to the
-offline template.
+deploys, never runs on pull requests, and runs **once per day** (plus
+`workflow_dispatch`). The scheduled run uses `source=live`. After artifacts
+upload it notifies [Orchestrator](https://github.com/defrances/Orchestrator)
+with the FindUpdates run id so Orchestrator can download
+`findupdates-report-json`. This job does not send email and does not create
+GitHub Issues.
 
 ```mermaid
 flowchart TD
-  Trigger["cron every 6 hours or workflow_dispatch"] --> Source{"DETECT_SOURCE"}
-  Source -->|"fixtures (default)"| Fix["Write fixture advisories + matching inventory"]
-  Source -->|"live"| Poll["Poll MSRC and Intel into output/advisories"]
+  Trigger["cron once per day or workflow_dispatch"] --> Source{"DETECT_SOURCE"}
+  Source -->|"fixtures"| Fix["Write fixture advisories + matching inventory"]
+  Source -->|"live (schedule default)"| Poll["Poll MSRC and Intel into output/advisories"]
   Fix --> Detect["python -m findupdates.pipeline detect"]
   Poll --> Detect
-  Detect --> Assess["assess: risk → bounded AI → dry-run upsert → notify"]
+  Detect --> Assess["assess: risk → dry-run upsert"]
   Assess --> Report["report.md + report.html + report.json"]
   Report --> Summary["GitHub Actions Job Summary (markdown)"]
   Report --> Artifacts["upload-artifact findupdates-detect + findupdates-report-json"]
+  Artifacts --> Orch["repository_dispatch Orchestrator findupdates-complete"]
   Detect -.->|"never"| NoDeploy["Intune / OEM / production install"]
 ```
 
@@ -141,7 +145,7 @@ Companion workflows:
 
 | Capability | Status |
 | --- | --- |
-| Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` may poll live only on schedule or `workflow_dispatch`. |
+| Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` polls live on the daily schedule or `workflow_dispatch` with `source=live`. |
 | NVD / CISA KEV enrichment | Implemented. Optional during detect (`--enrich`). |
 | Deterministic applicability, risk, policy | Implemented. |
 | Bounded AI analysis | Implemented. Actions may use GitHub Copilot CLI; unavailable Copilot falls back to the offline/template provider. |
@@ -222,15 +226,21 @@ Fixture mode writes synthetic advisories and the synthetic workstation catalog
 (refreshed timestamps). Live mode requires `--inventory` and polls MSRC/Intel.
 Detect always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV.
 
-On GitHub: **Actions → Detect updates → Run workflow**. Default source is
-`fixtures`. Live uses `configs/inventory/synthetic-workstations.json`. The Job
-Summary leads with per-station markdown (package, explanation, official URL)
-and is not an install authorization. Open `report.html` in the artifact for the
-English HTML report, or download `findupdates-report-json` for `report.json`
-(listed station rows, counts, official URLs). Live collection uses a **45-day**
-lookback so one run covers a Patch Tuesday plus the prior month without a full
-historical MSRC dump. GitHub Actions uploads one `.tgz` archive plus a separate
-JSON report artifact. Artifacts are retained for 14 days.
+On GitHub: **Actions → Detect updates → Run workflow**. Scheduled detect is
+**once per day at 06:17 UTC** and always uses `source=live`. Manual runs keep
+`fixtures` as the dispatch default. Live uses
+`configs/inventory/synthetic-workstations.json`. The Job Summary leads with
+per-station markdown (package, explanation, official URL) and is not an
+install authorization. Open `report.html` in the artifact for the English HTML
+report, or download `findupdates-report-json` for `report.json` (listed station
+rows, counts, official URLs). After upload, detect always notifies Orchestrator
+(`findupdates-complete`) with the run id. Orchestrator emails results. Detect
+does not send email and does not create GitHub Issues. Store
+`ORCHESTRATOR_PAT` in FindUpdates Actions secrets (Contents write on
+Orchestrator). Live collection uses a **45-day** lookback so one run covers a
+Patch Tuesday plus the prior month without a full historical MSRC dump. GitHub
+Actions uploads one `.tgz` archive plus a separate JSON report artifact.
+Artifacts are retained for 14 days.
 
 ### MVP end-to-end demo
 

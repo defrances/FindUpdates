@@ -30,7 +30,10 @@ Third-party Actions are pinned to SHAs. CI and dependency-review use
 `contents: read`. Change-promotion is `workflow_dispatch` only. OIDC
 (`id-token: write`) is requested only on canary and production jobs.
 `fail-on-severity: high` blocks merges with high/critical dependency
-findings.
+findings. Cross-repo notify of Orchestrator uses repository secret
+`ORCHESTRATOR_PAT` (Contents write on Orchestrator). SMTP credentials for the
+results email live only in Orchestrator (`SMTP_USERNAME`, `SMTP_PASSWORD`)
+and must never be committed.
 
 ## Emergency disable
 
