@@ -7,12 +7,12 @@ risk and policy, produces auditable GitHub change records, and (on the MVP
 path) validates, deploys through mock adapters, and records evidence.
 
 Product PDLC for [DesktopApplication](https://github.com/defrances/DesktopApplication)
-(architecture, MDS2-lite, product vulnerability report, app patch, smoke/regression,
+(architecture, MDS2-lite, product vulnerability report, smoke/regression,
 release zip) lives in [Orchestrator](https://github.com/defrances/Orchestrator)
-workflow **PDLC patch and release**. This repository's `station_report` is host
-OS/KB intelligence for workstations. It is **not** the product vulnerability
-input. A later release-notes block may cite `station_report` as OS KB advice
-only; Windows KBs are never packaged with the application.
+workflow **PDLC patch and release**. The same `findupdates-complete` notify that
+starts vendor email also starts that PDLC workflow. This repository's
+`station_report` is host OS/KB intelligence for workstations. It is **not** the
+product vulnerability input. Windows KBs are never packaged inside the client exe.
 
 **This repository is not approved for production medical-device deployment.**
 Patient identifiers and PHI must never enter fixtures, logs, model prompts, or
@@ -242,7 +242,8 @@ per-station markdown (package, explanation, official URL) and is not an
 install authorization. Open `report.html` in the artifact for the English HTML
 report, or download `findupdates-report-json` for `report.json` (listed station
 rows, counts, official URLs). After upload, detect always notifies Orchestrator
-(`findupdates-complete`) with the run id. Orchestrator emails results. Detect
+(`findupdates-complete`) with the run id. Orchestrator starts vendor email and
+product PDLC from that event. Detect
 does not send email and does not create GitHub Issues. Store
 `ORCHESTRATOR_PAT` in FindUpdates Actions secrets (Contents write on
 Orchestrator). Live collection uses a **45-day** lookback so one run covers a

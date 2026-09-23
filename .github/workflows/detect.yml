@@ -17,7 +17,8 @@ on:
 # notification noise. This workflow never deploys. Agentic AI / Copilot is off;
 # assess stays deterministic (offline template only if a caller re-enables AI).
 # After artifacts upload, the job notifies Orchestrator with the run id (not the
-# full JSON). Orchestrator emails results. This job does not send email.
+# full JSON). That dispatch starts vendor email and product PDLC. This job does
+# not send email.
 permissions:
   contents: read
 
@@ -126,6 +127,6 @@ jobs:
                 html_url: $html_url
               }
             }')
-          echo "Notifying defrances/Orchestrator findupdates-complete run=${{ github.run_id }}"
+          echo "Notifying defrances/Orchestrator findupdates-complete run=${{ github.run_id }} (vendor email + PDLC)"
           echo "$payload" | gh api repos/defrances/Orchestrator/dispatches --method POST --input -
           echo "https://github.com/defrances/Orchestrator/actions"
