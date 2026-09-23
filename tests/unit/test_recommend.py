@@ -20,6 +20,7 @@ from findupdates.pipeline.recommend import (
     CANDIDATE,
     official_advisory_url,
     recommend_station,
+    recommendations_to_dict,
     render_station_report,
 )
 from findupdates.risk import assess as assess_risk
@@ -116,6 +117,65 @@ class StationRecommendationTests(unittest.TestCase):
         self.assertEqual(row.action, CANDIDATE)
         self.assertEqual(row.verdict, "affected")
         self.assertNotEqual(row.policy_result, "BLOCK")
+
+    def test_live_shaped_msrc_sku_is_candidate_on_lab_24h2_station(self) -> None:
+        advisory = replace(
+            microsoft_advisory(),
+            affected_products=(
+                AffectedProduct(
+                    vendor="microsoft",
+                    product="Windows 11 Version 24H2 for x64-based Systems",
+                    version_range=None,
+                    builds=("10.0.26100.9106",),
+                    architectures=(Architecture.X64,),
+                    vendor_product_id="12390",
+                    cpe="cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.9106:*:*:*:*:*:x64:*",
+                    status=ProductStatus.AFFECTED,
+                ),
+            ),
+            remediations=(
+                Remediation(
+                    RemediationKind.VENDOR_FIX,
+                    "Install KB5120228",
+                    "10.0.26100.9106",
+                    None,
+                ),
+            ),
+        )
+        device = next(
+            item
+            for item in load_synthetic_workstations()
+            if item.device_id == "SYNTHETIC-LAB-24H2-01"
+        )
+        device = refresh_for_assessment(device, NOW)
+        app = evaluate(advisory, device, now=NOW)
+        risk = assess_risk(advisory, device, app, now=NOW)
+        row = recommend_station(advisory, device, app, risk)
+        self.assertEqual(row.action, CANDIDATE)
+        self.assertEqual(row.verdict, "affected")
+
+    def test_json_keeps_every_catalog_station(self) -> None:
+        advisory = microsoft_advisory()
+        rows = []
+        for device in load_synthetic_workstations():
+            fresh = refresh_for_assessment(device, NOW)
+            app = evaluate(advisory, fresh, now=NOW)
+            risk = assess_risk(advisory, fresh, app, now=NOW)
+            rows.append(recommend_station(advisory, fresh, app, risk))
+        payload = recommendations_to_dict(tuple(rows), correlation_id="catalog-test")
+        self.assertEqual(payload["station_count"], 7)
+        self.assertEqual(
+            payload["stations"],
+            [
+                "SYNTHETIC-CT-IMG-01",
+                "SYNTHETIC-LAB-24H2-01",
+                "SYNTHETIC-MR-IMG-01",
+                "SYNTHETIC-PACS-01",
+                "SYNTHETIC-US-01",
+                "SYNTHETIC-W11-24H2-01",
+                "SYNTHETIC-WKLIST-01",
+            ],
+        )
 
 
 if __name__ == "__main__":

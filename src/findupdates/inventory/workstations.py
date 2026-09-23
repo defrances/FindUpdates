@@ -14,7 +14,9 @@ CATALOG_PATH = REPO_ROOT / "configs" / "inventory" / "synthetic-workstations.jso
 WINDOWS_11_CPE = "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*"
 WINDOWS_10_CPE = "cpe:2.3:o:microsoft:windows_10:*:*:*:*:*:*:x64:*"
 WINDOWS_11_24H2_CPE = "cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.4200:*:*:*:*:*:x64:*"
+MSRC_WINDOWS_11_22H2_X64 = "12086"
 MSRC_WINDOWS_11_24H2_X64 = "12390"
+MSRC_WINDOWS_10_21H2_X64 = "11931"
 _STAMP = "2026-09-15T12:00:00+00:00"
 
 
@@ -49,7 +51,7 @@ def _stations() -> list[dict[str, Any]]:
             os_edition="IoT Enterprise",
             os_version="22H2",
             os_build="10.0.22621.2500",
-            os_vendor_product_id="windows_11",
+            os_vendor_product_id=MSRC_WINDOWS_11_22H2_X64,
             os_cpe=WINDOWS_11_CPE,
             cpu_name="Core i7-1185G7",
             cpu_version="0x0000000a",
@@ -73,7 +75,7 @@ def _stations() -> list[dict[str, Any]]:
             os_edition="IoT Enterprise",
             os_version="22H2",
             os_build="10.0.22621.2500",
-            os_vendor_product_id="windows_11",
+            os_vendor_product_id=MSRC_WINDOWS_11_22H2_X64,
             os_cpe=WINDOWS_11_CPE,
             cpu_name="Example Intel CPU Family",
             cpu_version="family-13",
@@ -97,7 +99,7 @@ def _stations() -> list[dict[str, Any]]:
             os_edition="IoT Enterprise",
             os_version="22H2",
             os_build="10.0.22621.2500",
-            os_vendor_product_id="windows_11",
+            os_vendor_product_id=MSRC_WINDOWS_11_22H2_X64,
             os_cpe=WINDOWS_11_CPE,
             cpu_name=None,
             app_name="PACS Viewer",
@@ -117,7 +119,7 @@ def _stations() -> list[dict[str, Any]]:
             os_edition="IoT Enterprise",
             os_version="21H2",
             os_build="10.0.19044.3803",
-            os_vendor_product_id="windows_10",
+            os_vendor_product_id=MSRC_WINDOWS_10_21H2_X64,
             os_cpe=WINDOWS_10_CPE,
             cpu_name="Core i7-1185G7",
             cpu_version="0x0000000a",
@@ -141,8 +143,8 @@ def _stations() -> list[dict[str, Any]]:
             os_edition="IoT Enterprise",
             os_version="24H2",
             os_build="10.0.26100.4200",
-            os_vendor_product_id="windows_11",
-            os_cpe=WINDOWS_11_CPE,
+            os_vendor_product_id=MSRC_WINDOWS_11_24H2_X64,
+            os_cpe=WINDOWS_11_24H2_CPE,
             cpu_name="Example Intel CPU Family",
             cpu_version="family-13",
             cpu_vendor_product_id="intel:example-cpu-family-13",
@@ -165,7 +167,7 @@ def _stations() -> list[dict[str, Any]]:
             os_edition="IoT Enterprise",
             os_version="22H2",
             os_build="10.0.22621.2500",
-            os_vendor_product_id="windows_11",
+            os_vendor_product_id=MSRC_WINDOWS_11_22H2_X64,
             os_cpe=WINDOWS_11_CPE,
             cpu_name=None,
             app_name="Radiology Worklist",

@@ -269,7 +269,12 @@ def _write_json_report(output: Path, *, source: str, exit_code: int) -> None:
         "not_in_scope_count": actions.count(NOT_IN_SCOPE),
         "schema_version": "1.0",
         "source": source,
-        "station_count": len({item.get("device_id") for item in items if item.get("device_id")}),
+        "station_count": payload.get(
+            "station_count",
+            len({item.get("device_id") for item in items if item.get("device_id")}),
+        ),
+        "stations": payload.get("stations")
+        or sorted({item.get("device_id") for item in items if item.get("device_id")}),
     }
     if "token" in report:
         raise AssessError("refusing to write report JSON that contains a token field")

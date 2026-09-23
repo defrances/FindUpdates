@@ -177,10 +177,13 @@ def recommendations_to_dict(
     rows: tuple[StationRecommendation, ...], *, correlation_id: str
 ) -> dict[str, object]:
     """JSON mapping. Token fields are not included."""
+    stations = sorted({item.device_id for item in rows})
     return {
         "correlation_id": correlation_id,
         "item_count": len(rows),
         "listed_count": sum(1 for item in rows if item.listed),
+        "station_count": len(stations),
+        "stations": stations,
         "items": [
             {
                 "device_id": item.device_id,

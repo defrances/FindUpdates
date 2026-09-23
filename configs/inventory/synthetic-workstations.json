@@ -31,7 +31,7 @@
         "version": "22H2",
         "build": "10.0.22621.2500",
         "architecture": "x64",
-        "vendor_product_id": "windows_11",
+        "vendor_product_id": "12086",
         "cpe": "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*",
         "verification_state": "verified"
       },
@@ -120,7 +120,7 @@
         "version": "22H2",
         "build": "10.0.22621.2500",
         "architecture": "x64",
-        "vendor_product_id": "windows_11",
+        "vendor_product_id": "12086",
         "cpe": "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*",
         "verification_state": "verified"
       },
@@ -209,7 +209,7 @@
         "version": "22H2",
         "build": "10.0.22621.2500",
         "architecture": "x64",
-        "vendor_product_id": "windows_11",
+        "vendor_product_id": "12086",
         "cpe": "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*",
         "verification_state": "verified"
       },
@@ -273,7 +273,7 @@
         "version": "21H2",
         "build": "10.0.19044.3803",
         "architecture": "x64",
-        "vendor_product_id": "windows_10",
+        "vendor_product_id": "11931",
         "cpe": "cpe:2.3:o:microsoft:windows_10:*:*:*:*:*:*:x64:*",
         "verification_state": "verified"
       },
@@ -362,8 +362,8 @@
         "version": "24H2",
         "build": "10.0.26100.4200",
         "architecture": "x64",
-        "vendor_product_id": "windows_11",
-        "cpe": "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*",
+        "vendor_product_id": "12390",
+        "cpe": "cpe:2.3:o:microsoft:windows_11_24H2:10.0.26100.4200:*:*:*:*:*:x64:*",
         "verification_state": "verified"
       },
       "hardware_components": [
@@ -451,7 +451,7 @@
         "version": "22H2",
         "build": "10.0.22621.2500",
         "architecture": "x64",
-        "vendor_product_id": "windows_11",
+        "vendor_product_id": "12086",
         "cpe": "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:x64:*",
         "verification_state": "verified"
       },
