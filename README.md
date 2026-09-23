@@ -6,6 +6,14 @@ matches them against managed-device inventory, computes deterministic
 risk and policy, produces auditable GitHub change records, and (on the MVP
 path) validates, deploys through mock adapters, and records evidence.
 
+Product PDLC for [DesktopApplication](https://github.com/defrances/DesktopApplication)
+(architecture, MDS2-lite, product vulnerability report, app patch, smoke/regression,
+release zip) lives in [Orchestrator](https://github.com/defrances/Orchestrator)
+workflow **PDLC patch and release**. This repository's `station_report` is host
+OS/KB intelligence for workstations. It is **not** the product vulnerability
+input. A later release-notes block may cite `station_report` as OS KB advice
+only; Windows KBs are never packaged with the application.
+
 **This repository is not approved for production medical-device deployment.**
 Patient identifiers and PHI must never enter fixtures, logs, model prompts, or
 audit artifacts. Vendor advisory text is untrusted input.
