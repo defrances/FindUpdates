@@ -9,8 +9,8 @@ path) validates, deploys through mock adapters, and records evidence.
 Product PDLC for [DesktopApplication](https://github.com/defrances/DesktopApplication)
 (architecture, MDS2-lite, product vulnerability report, smoke/regression,
 release zip) lives in [Orchestrator](https://github.com/defrances/Orchestrator)
-workflow **PDLC patch and release**. The same `findupdates-complete` notify that
-starts vendor email also starts that PDLC workflow. This repository's
+workflow **PDLC patch and release**. The `findupdates-complete` notify starts one Orchestrator
+workflow that emails vendor impact and builds the PDLC package. This repository's
 `station_report` is host OS/KB intelligence for workstations. It is **not** the
 product vulnerability input. Windows KBs are never packaged inside the client exe.
 
@@ -242,8 +242,8 @@ per-station markdown (package, explanation, official URL) and is not an
 install authorization. Open `report.html` in the artifact for the English HTML
 report, or download `findupdates-report-json` for `report.json` (listed station
 rows, counts, official URLs). After upload, detect always notifies Orchestrator
-(`findupdates-complete`) with the run id. Orchestrator starts vendor email and
-product PDLC from that event. Detect
+(`findupdates-complete`) with the run id. Orchestrator starts one
+Vendor impact and PDLC run. Detect
 does not send email and does not create GitHub Issues. Store
 `ORCHESTRATOR_PAT` in FindUpdates Actions secrets (Contents write on
 Orchestrator). Live collection uses a **45-day** lookback so one run covers a
