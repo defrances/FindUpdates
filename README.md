@@ -1,18 +1,17 @@
 # FindUpdates
 
-FindUpdates is a safety-conscious update intelligence and orchestration pipeline
-for medical-device environments. It discovers Microsoft and Intel advisories,
-matches them against managed-device inventory, computes deterministic
-risk and policy, produces auditable GitHub change records, and (on the MVP
-path) validates, deploys through mock adapters, and records evidence.
+FindUpdates discovers Microsoft and Intel advisories, matches them to a
+non-PHI workstation catalog, scores deterministic risk and policy, and writes
+a `station_report`. That report is **host OS / KB intelligence**. It is not
+the product vulnerability list for
+[DesktopApplication](https://github.com/defrances/DesktopApplication).
 
-Product PDLC for [DesktopApplication](https://github.com/defrances/DesktopApplication)
-(architecture, MDS2-lite, product vulnerability report, smoke/regression,
-release zip) lives in [Orchestrator](https://github.com/defrances/Orchestrator)
-workflow **PDLC patch and release**. The `findupdates-complete` notify starts one Orchestrator
-workflow that emails vendor impact and builds the PDLC package. This repository's
-`station_report` is host OS/KB intelligence for workstations. It is **not** the
-product vulnerability input. Windows KBs are never packaged inside the client exe.
+After detect uploads `findupdates-report-json`, this repository notifies
+[Orchestrator](https://github.com/defrances/Orchestrator) (`findupdates-complete`
+plus run id). Orchestrator runs **Vendor impact and PDLC** once: vendor-impact
+email, product PDLC from DesktopApplication `docs/` + `main`, tests, app zip,
+and a Windows KB **bundle** (manifest + `APPLY.ps1`, not `.msu` files). Detect
+does not send email and does not create GitHub Issues.
 
 **This repository is not approved for production medical-device deployment.**
 Patient identifiers and PHI must never enter fixtures, logs, model prompts, or
@@ -22,6 +21,7 @@ GitHub is the control plane for code, change records, approvals, and evidence.
 Device updates execute only through approved deployment adapters. Agentic AI
 may summarize and explain evidence; it is never authoritative for applicability,
 severity, approval, or production deployment ([ADR-0003](docs/adr/0003-non-authoritative-ai.md)).
+Scheduled detect keeps Agentic AI **off** (`FINDUPDATES_AI_ENABLED=false`).
 
 ---
 
@@ -126,6 +126,24 @@ with the FindUpdates run id so Orchestrator can download
 `findupdates-report-json`. This job does not send email and does not create
 GitHub Issues.
 
+Live detect uses `configs/inventory/synthetic-workstations.json` (**7**
+stations). A KB is a deploy candidate on a station only when that station's OS
+identity matches an MSRC affected product (ProductID first, then CPE, then a
+weak family name). Current SKUs:
+
+| Stations | MSRC ProductID | OS |
+| --- | --- | --- |
+| `SYNTHETIC-CT-IMG-01`, `SYNTHETIC-MR-IMG-01`, `SYNTHETIC-PACS-01`, `SYNTHETIC-WKLIST-01` | `12086` | Windows 11 22H2 x64 |
+| `SYNTHETIC-LAB-24H2-01`, `SYNTHETIC-W11-24H2-01` | `12390` | Windows 11 24H2 x64 |
+| `SYNTHETIC-US-01` | `11931` | Windows 10 21H2 x64 |
+
+ProductID and CPE come from the monthly CVRF
+(`https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep`), not from the
+Update Guide HTML. The public CVE page shows SKU name, KB, and build under
+**Security Updates**. `report.json` always lists all seven `stations`; listed
+KB rows are only those that matched. A 45-day lookback covers Patch Tuesday
+plus the prior month.
+
 ```mermaid
 flowchart TD
   Trigger["cron once per day or workflow_dispatch"] --> Source{"DETECT_SOURCE"}
@@ -156,7 +174,7 @@ Companion workflows:
 | Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` polls live on the daily schedule or `workflow_dispatch` with `source=live`. |
 | NVD / CISA KEV enrichment | Implemented. Optional during detect (`--enrich`). |
 | Deterministic applicability, risk, policy | Implemented. |
-| Bounded AI analysis | Implemented. Actions may use GitHub Copilot CLI; unavailable Copilot falls back to the offline/template provider. |
+| Bounded AI analysis | Implemented in the library. GitHub `detect.yml` keeps it **off** (`FINDUPDATES_AI_ENABLED=false`, `--skip-ai`). If a caller re-enables Copilot and the CLI is missing, assess falls back to the offline template. |
 | Change-record upsert | Memory store for CI/MVP. `GitHubChangeStore` for live Issues (`--store github`). Detect always dry-runs upsert. |
 | Notifications | In-memory GitHub comment formatter. Optional webhook from `FINDUPDATES_NOTIFICATION_WEBHOOK_URL`. Detect publishes a Job Summary. No live Issue-comment POST from assess/detect. |
 | Lab validation, deployment, rollout, monitoring, audit | Implemented against `MockDeploymentAdapter`, `SimulatedTarget`, and simulated heartbeats in the MVP demo. |
