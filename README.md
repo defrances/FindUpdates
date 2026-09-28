@@ -11,7 +11,9 @@ After detect uploads `findupdates-report-json`, this repository notifies
 plus run id). Orchestrator runs **Vendor impact and PDLC** once: vendor-impact
 email, product PDLC from DesktopApplication `docs/` + `main`, tests, app zip,
 and a Windows KB **bundle** (manifest + `APPLY.ps1`, not `.msu` files). Detect
-does not send email and does not create GitHub Issues.
+does not send email and does not create GitHub Issues. Product patch management
+for UVCS configuration 1 lives on the product (design control), not in this
+lab-validation procedure.
 
 **This repository is not approved for production medical-device deployment.**
 Patient identifiers and PHI must never enter fixtures, logs, model prompts, or

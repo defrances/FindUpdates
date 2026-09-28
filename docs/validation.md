@@ -28,3 +28,6 @@ recorded.
 CI uses `SimulatedTarget` synthetic workstations. Fixtures contain no patient
 data. Pre- and post-update version snapshots and per-case log checksums are
 attached as artifacts.
+
+Product patch management for UVCS configuration 1 is a design-control activity on the product (design/config spec and the product security risk-management file). This lab gate is not that procedure.
+
