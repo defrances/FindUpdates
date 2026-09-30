@@ -6,7 +6,7 @@ a `station_report`. Listed rows include `severity`, `known_exploited`, and
 `exploitability` so Orchestrator can show vendor likelihood separately from
 the product score. That report is **host OS / KB intelligence**. It is not
 the product vulnerability list for
-[Host Application](https://github.com/defrances/DesktopApplication).
+[Host Application](https://github.com/defrances/HostApplication).
 
 After detect uploads `findupdates-report-json`, this repository notifies
 [Orchestrator](https://github.com/defrances/Orchestrator) (`findupdates-complete`
