@@ -6,12 +6,12 @@ a `station_report`. Listed rows include `severity`, `known_exploited`, and
 `exploitability` so Orchestrator can show vendor likelihood separately from
 the product score. That report is **host OS / KB intelligence**. It is not
 the product vulnerability list for
-[DesktopApplication](https://github.com/defrances/DesktopApplication).
+[Host Application](https://github.com/defrances/DesktopApplication).
 
 After detect uploads `findupdates-report-json`, this repository notifies
 [Orchestrator](https://github.com/defrances/Orchestrator) (`findupdates-complete`
 plus run id). Orchestrator runs **Vendor impact and PDLC** once: vendor-impact
-email, product PDLC from DesktopApplication `docs/` + `main`, tests, app zip,
+email, product PDLC from Host Application `docs/` + `main`, tests, app zip,
 and a Windows KB **bundle** (manifest + `APPLY.ps1`, not `.msu` files). Detect
 does not send email and does not create GitHub Issues. Product patch management
 for UVCS configuration 1 lives on the product (design control), not in this
