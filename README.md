@@ -2,7 +2,9 @@
 
 FindUpdates discovers Microsoft and Intel advisories, matches them to a
 non-PHI workstation catalog, scores deterministic risk and policy, and writes
-a `station_report`. That report is **host OS / KB intelligence**. It is not
+a `station_report`. Listed rows include `severity`, `known_exploited`, and
+`exploitability` so Orchestrator can show vendor likelihood separately from
+the product score. That report is **host OS / KB intelligence**. It is not
 the product vulnerability list for
 [DesktopApplication](https://github.com/defrances/DesktopApplication).
 

@@ -54,6 +54,8 @@ class StationRecommendation:
     explanation: str
     action: str
     listed: bool
+    known_exploited: str
+    exploitability: str
 
 
 def recommend_station(
@@ -90,6 +92,8 @@ def recommend_station(
         explanation=_explanation(advisory, device, applicability, risk, action),
         action=action,
         listed=listed,
+        known_exploited=advisory.known_exploited.value,
+        exploitability=advisory.exploitability.value,
     )
 
 
@@ -203,6 +207,8 @@ def recommendations_to_dict(
                 "policy_result": item.policy_result,
                 "risk_score": item.risk_score,
                 "severity": item.severity,
+                "known_exploited": item.known_exploited,
+                "exploitability": item.exploitability,
                 "official_url": item.official_url,
                 "explanation": item.explanation,
                 "action": item.action,

@@ -164,6 +164,9 @@ class StationRecommendationTests(unittest.TestCase):
             rows.append(recommend_station(advisory, fresh, app, risk))
         payload = recommendations_to_dict(tuple(rows), correlation_id="catalog-test")
         self.assertEqual(payload["station_count"], 7)
+        first = payload["items"][0]
+        self.assertIn("known_exploited", first)
+        self.assertIn("exploitability", first)
         self.assertEqual(
             payload["stations"],
             [
