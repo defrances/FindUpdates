@@ -122,13 +122,12 @@ The detailed trust model lives in [docs/architecture.md](docs/architecture.md).
 
 ## GitHub detect path (what Actions run today)
 
-`.github/workflows/detect.yml` is the scheduled intelligence loop. It never
-deploys, never runs on pull requests, and runs **once per day** (plus
-`workflow_dispatch`). The scheduled run uses `source=live`. After artifacts
-upload it notifies [Orchestrator](https://github.com/defrances/Orchestrator)
-with the FindUpdates run id so Orchestrator can download
-`findupdates-report-json`. This job does not send email and does not create
-GitHub Issues.
+`.github/workflows/detect.yml` is the intelligence loop. It never deploys,
+never runs on pull requests, and never runs on a schedule. Operators start it
+with **Run workflow**. After artifacts upload it notifies
+[Orchestrator](https://github.com/defrances/Orchestrator) with the FindUpdates
+run id so Orchestrator can download `findupdates-report-json`. This job does
+not send email and does not create GitHub Issues.
 
 Live detect uses `configs/inventory/synthetic-workstations.json` (**7**
 stations). A KB is a deploy candidate on a station only when that station's OS
@@ -150,9 +149,9 @@ plus the prior month.
 
 ```mermaid
 flowchart TD
-  Trigger["cron once per day or workflow_dispatch"] --> Source{"DETECT_SOURCE"}
+  Trigger["workflow_dispatch"] --> Source{"DETECT_SOURCE"}
   Source -->|"fixtures"| Fix["Write fixture advisories + matching inventory"]
-  Source -->|"live (schedule default)"| Poll["Poll MSRC and Intel into output/advisories"]
+  Source -->|"live"| Poll["Poll MSRC and Intel into output/advisories"]
   Fix --> Detect["python -m findupdates.pipeline detect"]
   Poll --> Detect
   Detect --> Assess["assess: risk → dry-run upsert"]
@@ -175,7 +174,7 @@ Companion workflows:
 
 | Capability | Status |
 | --- | --- |
-| Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` polls live on the daily schedule or `workflow_dispatch` with `source=live`. |
+| Microsoft MSRC and Intel CSAF collectors | Implemented. Operators can poll live. GitHub `collect.yml` stays `--dry-run`. `detect.yml` polls live only when `workflow_dispatch` sets `source=live`. |
 | NVD / CISA KEV enrichment | Implemented. Optional during detect (`--enrich`). |
 | Deterministic applicability, risk, policy | Implemented. |
 | Bounded AI analysis | Implemented in the library. GitHub `detect.yml` keeps it **off** (`FINDUPDATES_AI_ENABLED=false`, `--skip-ai`). If a caller re-enables Copilot and the CLI is missing, assess falls back to the offline template. |
@@ -256,9 +255,8 @@ Fixture mode writes synthetic advisories and the synthetic workstation catalog
 (refreshed timestamps). Live mode requires `--inventory` and polls MSRC/Intel.
 Detect always dry-runs change-record upsert. Pass `--enrich` to run NVD/CISA KEV.
 
-On GitHub: **Actions → Detect updates → Run workflow**. Scheduled detect is
-**once per day at 06:17 UTC** and always uses `source=live`. Manual runs keep
-`fixtures` as the dispatch default. Live uses
+On GitHub: **Actions → Detect updates → Run workflow**. There is no scheduled
+detect. Manual runs keep `fixtures` as the dispatch default. Live uses
 `configs/inventory/synthetic-workstations.json`. The Job Summary leads with
 per-station markdown (package, explanation, official URL) and is not an
 install authorization. Open `report.html` in the artifact for the English HTML

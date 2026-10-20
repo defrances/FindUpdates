@@ -1,12 +1,11 @@
 name: Collect
 
 on:
-  schedule:
-    - cron: "17 */6 * * *"
   workflow_dispatch:
 
-# No pull_request trigger: untrusted PRs must not hammer vendor feeds or
-# confuse collection outages with merge status. This workflow never deploys.
+# No schedule and no pull_request trigger: untrusted PRs must not hammer
+# vendor feeds or confuse collection outages with merge status.
+# Operators start this from Run workflow. This workflow never deploys.
 permissions:
   contents: read
 

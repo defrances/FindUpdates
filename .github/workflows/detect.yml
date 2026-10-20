@@ -1,8 +1,6 @@
 name: Detect updates
 
 on:
-  schedule:
-    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       source:
@@ -13,8 +11,9 @@ on:
           - live
         default: fixtures
 
-# No pull_request trigger: untrusted PRs must not poll vendors or create
-# notification noise. This workflow never deploys. Agentic AI / Copilot is off;
+# No schedule and no pull_request trigger: untrusted PRs must not poll vendors
+# or create notification noise. Operators start this from Run workflow.
+# This workflow never deploys. Agentic AI / Copilot is off;
 # assess stays deterministic (offline template only if a caller re-enables AI).
 # After artifacts upload, the job notifies Orchestrator with the run id (not the
 # full JSON). That dispatch starts one Vendor impact and PDLC run. This job does

@@ -83,7 +83,7 @@ allow-listed HTTPS only. The HTML is the operator artifact; Job Summary stays
 markdown. Issue #87 copies the listed station rows to detect `report.json` and
 uploads that file as a separate GitHub Actions artifact so reviewers do not
 have to unpack the tgz. The JSON is not an install authorization. Issue #89
-runs detect once per day with `source=live` and always notifies Orchestrator
+runs detect from `workflow_dispatch` (no schedule) and always notifies Orchestrator
 with the run id (`findupdates-complete`). That event starts one Orchestrator
 Vendor impact and PDLC run. Detect does not send email and does
 not create GitHub Issues.
@@ -117,8 +117,8 @@ An empty window is not treated as not_affected.
 Assess does not poll vendors, run lab validation, or invoke a deployment
 adapter. It does not post live GitHub Issue comments, persist a cross-process
 notification log, or add an acknowledgement CLI. GitHub Actions `collect.yml`
-stays `--dry-run` only. `detect.yml` may poll vendors only on the daily
-schedule or `workflow_dispatch` with `--source live`; it never deploys.
+stays `--dry-run` only. `detect.yml` may poll vendors only on
+`workflow_dispatch` with `--source live`; it never deploys.
 Promotion still uses
 `python -m findupdates.changerecords.workflow` and still reads policy from the
 stored record.
